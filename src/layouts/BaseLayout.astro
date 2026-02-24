@@ -11,6 +11,45 @@ const { title = "Planck Surface Engineers" } = Astro.props;
     <title>{title}</title>
   </head>
   <body class="bg-bg text-text antialiased">
-    <slot />
-  </body>
+
+  <header class="sticky top-0 z-50 bg-bg border-b border-border">
+    <div class="mx-auto max-w-content px-6 py-4 flex justify-between items-center">
+     <a href="/" class="flex items-center gap-3">
+  <img src="/brand/planck.png" alt="Planck" class="h-20 w-auto" />
+</a>
+
+ <a
+  href="#request"
+  class="text-sm border border-border px-4 py-2 hover:border-accent transition-colors"
+>
+  Request Appointment
+</a>
+
+    </div>
+  </header>
+
+  <slot />
+<footer class="border-t border-border">
+  <div class="mx-auto max-w-content px-6 py-10">
+    <div class="flex flex-wrap items-start justify-between gap-8">
+      <div class="text-sm text-muted">
+        <div class="text-text font-semibold">Planck Surface Engineers</div>
+        <div class="mt-2">
+          Pinecrest · Coral Gables · South Miami · Kendall · Brickell · South Beach · Aventura · Doral · Palmetto Bay · Old Cutler
+        </div>
+      </div>
+
+      <div class="max-w-md text-sm text-muted leading-relaxed">
+        Appointment approval is subject to condition assessment and schedule alignment.
+        Fixed protocol pricing. Scope is not negotiated.
+      </div>
+    </div>
+
+    <div class="mt-8 text-xs text-muted">
+      © {new Date().getFullYear()} Planck. All rights reserved.
+    </div>
+  </div>
+</footer>
+</body>
+
 </html>

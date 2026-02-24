@@ -1,0 +1,668 @@
+---
+const PHOTO_POLICY = {
+  requiredMin: 4,
+  requiredExterior: 2,
+  requiredInterior: 2,
+};
+
+const ENDPOINTS = {
+  uploadUrl: "/api/upload-url",
+  submit: "/api/submit",
+};
+
+const DRAFT_KEY = "planck_intake_draft_v0_01";
+---
+
+<section id="request" class="scroll-mt-24">
+  <div class="rounded-2xl border border-border bg-surface p-4 sm:p-6 md:p-10">
+    <div class="max-w-[72ch]">
+      <h2 class="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
+        Request a Private Appointment
+      </h2>
+
+      <p class="mt-3 text-muted leading-relaxed">
+        Appointment-only. Requests are reviewed for fit, location, and surface condition.
+        If approved, you’ll receive a confirmed time window and preparation notes.
+      </p>
+
+      <div class="mt-6 rounded-xl border border-border bg-bg/40 p-4">
+        <p class="text-sm text-muted leading-relaxed">
+          <span class="text-text font-medium">Draft policy:</span>
+          this form saves a private draft on your device. <span class="text-text font-medium">Nothing is submitted</span>
+          until required photos are attached and you select <span class="text-text font-medium">Submit for Review</span>.
+        </p>
+
+        <p class="mt-3 text-sm text-muted leading-relaxed">
+          <span class="text-text font-medium">Standards:</span>
+          clean access to the asset, safe parking, and sufficient working space.
+          Execution is scheduled to protect quality. Partial requests (interior or exterior only)
+          are billed at base protocol rates. Weather-contingent interior work may be credited
+          toward a future full protocol when applicable.
+        </p>
+
+        <p class="mt-3 text-sm text-muted leading-relaxed">
+          <span class="text-text font-medium">Photo minimum for review:</span>
+          {PHOTO_POLICY.requiredExterior} exterior + {PHOTO_POLICY.requiredInterior} interior
+          ({PHOTO_POLICY.requiredMin} total). More may be requested before approval.
+        </p>
+      </div>
+    </div>
+
+    <form
+      id="planck-intake"
+      class="mt-8 grid gap-6"
+      data-draft-key={DRAFT_KEY}
+      data-upload-url={ENDPOINTS.uploadUrl}
+      data-submit-url={ENDPOINTS.submit}
+      data-required-exterior={String(PHOTO_POLICY.requiredExterior)}
+      data-required-interior={String(PHOTO_POLICY.requiredInterior)}
+      data-required-min={String(PHOTO_POLICY.requiredMin)}
+    >
+      <!-- Hidden stable ID (stored in draft) -->
+      <input type="hidden" name="intake_id" />
+
+      <!-- Contact -->
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Name</span>
+          <input
+            required
+            name="name"
+            autocomplete="name"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="First + last"
+          />
+        </label>
+
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Preferred contact</span>
+          <select
+            required
+            name="contact_method"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            <option value="">Select…</option>
+            <option>Email</option>
+            <option>Text</option>
+            <option>Call</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Email</span>
+          <input
+            required
+            type="email"
+            name="email"
+            autocomplete="email"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="you@domain.com"
+          />
+        </label>
+
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Phone (if text/call)</span>
+          <input
+            name="phone"
+            inputmode="tel"
+            autocomplete="tel"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="(optional)"
+          />
+        </label>
+      </div>
+
+      <!-- Asset -->
+      <div class="grid gap-4 md:grid-cols-3">
+        <label class="grid gap-2 md:col-span-1">
+          <span class="text-sm text-muted">Asset class</span>
+          <select
+            required
+            name="asset_class"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            <option value="">Select…</option>
+            <option>Vehicle — Sedan/Coupe</option>
+            <option>Vehicle — SUV</option>
+            <option>Vehicle — Truck</option>
+            <option>Vehicle — Exotic/Collector</option>
+            <option>Other</option>
+          </select>
+        </label>
+
+        <label class="grid gap-2 md:col-span-2">
+          <span class="text-sm text-muted">Make / Model (and year if known)</span>
+          <input
+            required
+            name="asset_details"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="e.g., 2022 Porsche Cayenne"
+          />
+        </label>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Level of execution</span>
+          <select
+            required
+            name="tier"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            <option value="">Select…</option>
+            <option>Maintenance Protocol</option>
+            <option>Correction Protocol</option>
+            <option>Full Surface Reset</option>
+            <option>Not sure — recommend</option>
+          </select>
+        </label>
+
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Service area</span>
+          <input
+            required
+            name="service_area"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="Pinecrest / Coral Gables / etc."
+          />
+        </label>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Preferred day(s)</span>
+          <input
+            name="preferred_days"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="e.g., Tue/Thu"
+          />
+        </label>
+
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Preferred time window</span>
+          <input
+            name="preferred_window"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="e.g., 10–2"
+          />
+        </label>
+      </div>
+
+      <label class="grid gap-2">
+        <span class="text-sm text-muted">Condition notes (be honest)</span>
+        <textarea
+          required
+          name="condition_notes"
+          rows="5"
+          class="w-full rounded-xl border border-border bg-bg p-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="Paint condition, interior condition, pet hair, stains, odor, tree sap, tar, heavy brake dust, etc."
+        ></textarea>
+      </label>
+
+      <label class="grid gap-2">
+        <span class="text-sm text-muted">Access notes</span>
+        <textarea
+          name="access_notes"
+          rows="3"
+          class="w-full rounded-xl border border-border bg-bg p-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="Parking, gate/code, water access (if any), shade/garage, etc."
+        ></textarea>
+      </label>
+
+      <!-- PHOTOS -->
+      <div class="rounded-2xl border border-border bg-bg/30 p-4 sm:p-6">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm text-text font-medium">Photos (required for review)</p>
+            <p class="mt-1 text-sm text-muted">
+              Minimum: <span class="text-text font-medium">2 exterior</span> + <span class="text-text font-medium">2 interior</span>.
+            </p>
+          </div>
+
+          <div class="text-xs text-muted">
+            Draft saved locally · uploads are stored for review
+          </div>
+        </div>
+
+        <div class="mt-5 grid gap-4 md:grid-cols-2">
+          <label class="grid gap-2">
+            <span class="text-sm text-muted">Exterior photos (min 2)</span>
+            <input
+              id="photos-exterior"
+              type="file"
+              accept="image/*"
+              multiple
+              class="block w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text file:mr-4 file:rounded-lg file:border-0 file:bg-surface file:px-3 file:py-2 file:text-sm file:font-medium file:text-text"
+            />
+          </label>
+
+          <label class="grid gap-2">
+            <span class="text-sm text-muted">Interior photos (min 2)</span>
+            <input
+              id="photos-interior"
+              type="file"
+              accept="image/*"
+              multiple
+              class="block w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text file:mr-4 file:rounded-lg file:border-0 file:bg-surface file:px-3 file:py-2 file:text-sm file:font-medium file:text-text"
+            />
+          </label>
+        </div>
+
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <div class="rounded-xl border border-border bg-bg p-3">
+            <p class="text-xs uppercase tracking-wider text-muted">Exterior status</p>
+            <p class="mt-2 text-sm text-text">
+              <span id="count-exterior">0</span> uploaded
+            </p>
+            <p class="mt-1 text-xs text-muted" id="status-exterior">Awaiting uploads</p>
+          </div>
+
+          <div class="rounded-xl border border-border bg-bg p-3">
+            <p class="text-xs uppercase tracking-wider text-muted">Interior status</p>
+            <p class="mt-2 text-sm text-text">
+              <span id="count-interior">0</span> uploaded
+            </p>
+            <p class="mt-1 text-xs text-muted" id="status-interior">Awaiting uploads</p>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <p class="text-xs text-muted">
+            If your upload fails, refresh and try again. Draft fields remain saved on your device.
+          </p>
+        </div>
+      </div>
+
+      <!-- Submit controls -->
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="text-sm text-muted">
+          <span class="text-text font-medium">Not submitted</span> until photo minimum is met and you select <span class="text-text font-medium">Submit for Review</span>.
+        </div>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            id="clear-draft"
+            class="h-11 w-full sm:w-auto rounded-xl border border-border bg-bg px-5 text-sm font-medium text-text hover:border-accent/50 hover:bg-bg/60"
+          >
+            Clear Draft
+          </button>
+
+          <button
+            type="submit"
+            id="submit-review"
+            disabled
+            class="h-11 w-full sm:w-auto rounded-xl bg-accent px-5 text-sm font-semibold text-bg opacity-60"
+          >
+            Submit for Review
+          </button>
+        </div>
+      </div>
+
+      <p class="mt-2 text-xs text-muted">
+        Submitting does not guarantee approval. Review is condition + schedule dependent.
+      </p>
+
+      <div
+        id="form-message"
+        class="hidden rounded-xl border border-border bg-bg/40 p-4 text-sm text-text"
+        role="status"
+        aria-live="polite"
+      ></div>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById("planck-intake");
+      if (!form) return;
+
+      const draftKey = form.dataset.draftKey || "planck_intake_draft_v0_01";
+      const uploadUrlEndpoint = form.dataset.uploadUrl || "/api/upload-url";
+      const submitEndpoint = form.dataset.submitUrl || "/api/submit";
+
+      const requiredExterior = Number(form.dataset.requiredExterior || "2");
+      const requiredInterior = Number(form.dataset.requiredInterior || "2");
+
+      const fileExt = document.getElementById("photos-exterior");
+      const fileInt = document.getElementById("photos-interior");
+
+      const countExtEl = document.getElementById("count-exterior");
+      const countIntEl = document.getElementById("count-interior");
+      const statusExtEl = document.getElementById("status-exterior");
+      const statusIntEl = document.getElementById("status-interior");
+
+      const submitBtn = document.getElementById("submit-review");
+      const clearBtn = document.getElementById("clear-draft");
+      const msgBox = document.getElementById("form-message");
+
+      function showMsg(text) {
+        if (!msgBox) return;
+        msgBox.textContent = text;
+        msgBox.classList.remove("hidden");
+      }
+      function hideMsg() {
+        if (!msgBox) return;
+        msgBox.classList.add("hidden");
+        msgBox.textContent = "";
+      }
+
+      function makeId() {
+        try {
+          if (crypto && crypto.randomUUID) return "intake_" + crypto.randomUUID().replace(/-/g, "");
+        } catch (e) {}
+        return "intake_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+      }
+
+      function getDraft() {
+        try {
+          const raw = localStorage.getItem(draftKey);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function setDraft(d) {
+        try {
+          localStorage.setItem(draftKey, JSON.stringify(d));
+        } catch (e) {}
+      }
+
+      function readFields() {
+        const data = {};
+        for (const el of form.elements) {
+          if (!el || !el.name) continue;
+          if (el.type === "file") continue;
+          data[el.name] = String(el.value || "");
+        }
+        return data;
+      }
+
+      function applyFields(data) {
+        if (!data) return;
+        for (const k in data) {
+          const el = form.elements[k];
+          if (el && typeof data[k] === "string") el.value = data[k];
+        }
+      }
+
+      function saveDraftFromForm() {
+        const d = getDraft() || {};
+        d.fields = readFields();
+        d.photos = d.photos || { items: [] };
+        setDraft(d);
+      }
+
+      function ensureIntakeId() {
+        const d = getDraft() || {};
+        d.id = d.id || makeId();
+        d.fields = d.fields || {};
+        d.fields.intake_id = d.id;
+
+        // Write hidden input
+        const idInput = form.elements["intake_id"];
+        if (idInput) idInput.value = d.id;
+
+        setDraft(d);
+        return d.id;
+      }
+
+      function photoCounts(items) {
+        const ext = items.filter((x) => x && x.category === "exterior").length;
+        const intr = items.filter((x) => x && x.category === "interior").length;
+        return { ext, intr };
+      }
+
+      function setCountsUI(items) {
+        const c = photoCounts(items);
+        if (countExtEl) countExtEl.textContent = String(c.ext);
+        if (countIntEl) countIntEl.textContent = String(c.intr);
+
+        if (statusExtEl) statusExtEl.textContent = c.ext >= requiredExterior ? "Minimum met" : "Awaiting uploads";
+        if (statusIntEl) statusIntEl.textContent = c.intr >= requiredInterior ? "Minimum met" : "Awaiting uploads";
+
+        const ready = c.ext >= requiredExterior && c.intr >= requiredInterior && form.checkValidity();
+        if (submitBtn) {
+          submitBtn.disabled = !ready;
+          submitBtn.classList.toggle("opacity-60", !ready);
+        }
+      }
+
+      async function getUploadUrl(intakeId, category, file) {
+        const payload = {
+          intake_id: intakeId,
+          category: category,
+          filename: file.name || "photo.jpg",
+          mime: file.type || "image/jpeg",
+          bytes: file.size || 0,
+        };
+
+        const res = await fetch(uploadUrlEndpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || !json.ok) {
+          throw new Error((json && json.error) || "upload_url_failed");
+        }
+        return json;
+      }
+
+      async function putFile(uploadUrl, file) {
+        const res = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "content-type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        if (!res.ok) throw new Error("upload_failed");
+      }
+
+      async function handleFiles(category, fileList) {
+        hideMsg();
+        const intakeId = ensureIntakeId();
+        const d = getDraft() || {};
+        d.photos = d.photos || { items: [] };
+
+        const files = Array.from(fileList || []);
+        if (!files.length) return;
+
+        const statusEl = category === "exterior" ? statusExtEl : statusIntEl;
+        if (statusEl) statusEl.textContent = "Uploading…";
+
+        for (const file of files) {
+          try {
+            const { key, uploadUrl } = await getUploadUrl(intakeId, category, file);
+            await putFile(uploadUrl, file);
+
+            d.photos.items.push({
+              key: String(key),
+              mime: String(file.type || "image/jpeg"),
+              bytes: Number(file.size || 0),
+              category: category,
+            });
+
+            setDraft(d);
+            setCountsUI(d.photos.items);
+          } catch (e) {
+            showMsg("Upload failed. Please refresh and try again.");
+            if (statusEl) statusEl.textContent = "Upload failed";
+            return;
+          }
+        }
+
+        if (statusEl) statusEl.textContent = "Upload complete";
+      }
+
+      function buildPacket() {
+        const d = getDraft() || {};
+        const fields = readFields();
+        const id = ensureIntakeId();
+
+        const items = (d.photos && d.photos.items) ? d.photos.items : [];
+        const c = photoCounts(items);
+
+        return {
+          v: "0.01",
+          kind: "planck.intake",
+          id: id,
+          ts: new Date().toISOString(),
+          source: {
+            surface: "planck.fyi",
+            channel: "web"
+          },
+          data: {
+            contact: {
+              name: fields.name || "",
+              method: fields.contact_method || "",
+              email: fields.email || "",
+              phone: fields.phone || ""
+            },
+            asset: {
+              class: fields.asset_class || "",
+              details: fields.asset_details || ""
+            },
+            request: {
+              tier: fields.tier || "",
+              service_area: fields.service_area || "",
+              preferred_days: fields.preferred_days || "",
+              preferred_window: fields.preferred_window || ""
+            },
+            notes: {
+              condition: fields.condition_notes || "",
+              access: fields.access_notes || ""
+            },
+            ack: {
+              approval_gated: true,
+              base_rate_for_partials: true,
+              photo_required: true
+            }
+          },
+          photos: {
+            required_min: 4,
+            required_categories: { exterior: 2, interior: 2 },
+            counts: { exterior: c.ext, interior: c.intr },
+            items: items
+          }
+        };
+      }
+
+      async function submitForReview() {
+        hideMsg();
+
+        // Ensure validity + photo minimum
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          setCountsUI(((getDraft() || {}).photos || {}).items || []);
+          return;
+        }
+
+        const d = getDraft() || {};
+        const items = (d.photos && d.photos.items) ? d.photos.items : [];
+        const c = photoCounts(items);
+
+        if (c.ext < requiredExterior || c.intr < requiredInterior) {
+          showMsg("Not submitted. Minimum: 2 exterior + 2 interior photos.");
+          setCountsUI(items);
+          return;
+        }
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.classList.add("opacity-60");
+          submitBtn.textContent = "Submitting…";
+        }
+
+        const packet = buildPacket();
+
+        const res = await fetch(submitEndpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(packet),
+        });
+
+        const json = await res.json().catch(() => null);
+
+        if (!res.ok || !json || !json.ok) {
+          const err = (json && json.error) ? String(json.error) : "submit_failed";
+          showMsg("Not submitted. Please try again. (" + err + ")");
+          if (submitBtn) {
+            submitBtn.textContent = "Submit for Review";
+            submitBtn.disabled = false;
+            submitBtn.classList.remove("opacity-60");
+          }
+          return;
+        }
+
+        showMsg("Request received. Review pending.");
+        // Clear draft after successful submit
+        try { localStorage.removeItem(draftKey); } catch (e) {}
+
+        if (submitBtn) {
+          submitBtn.textContent = "Submitted";
+          submitBtn.disabled = true;
+          submitBtn.classList.add("opacity-60");
+        }
+      }
+
+      // Init: load draft, ensure id, counts
+      (function init() {
+        const d = getDraft();
+        if (d && d.fields) applyFields(d.fields);
+
+        ensureIntakeId();
+
+        const items = (d && d.photos && d.photos.items) ? d.photos.items : [];
+        setCountsUI(items);
+
+        // Auto-save draft on any input change
+        form.addEventListener("input", function () {
+          saveDraftFromForm();
+          const dd = getDraft() || {};
+          const it = (dd.photos && dd.photos.items) ? dd.photos.items : [];
+          setCountsUI(it);
+        });
+
+        form.addEventListener("change", function () {
+          saveDraftFromForm();
+          const dd = getDraft() || {};
+          const it = (dd.photos && dd.photos.items) ? dd.photos.items : [];
+          setCountsUI(it);
+        });
+
+        if (fileExt) {
+          fileExt.addEventListener("change", function (e) {
+            const files = e && e.target ? e.target.files : null;
+            if (files) handleFiles("exterior", files);
+            fileExt.value = "";
+          });
+        }
+
+        if (fileInt) {
+          fileInt.addEventListener("change", function (e) {
+            const files = e && e.target ? e.target.files : null;
+            if (files) handleFiles("interior", files);
+            fileInt.value = "";
+          });
+        }
+
+        if (clearBtn) {
+          clearBtn.addEventListener("click", function () {
+            try { localStorage.removeItem(draftKey); } catch (e) {}
+            window.location.reload();
+          });
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          submitForReview();
+        });
+      })();
+    })();
+  </script>
+</section>

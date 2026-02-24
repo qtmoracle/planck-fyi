@@ -1,0 +1,82 @@
+---
+import { useState } from "astro/jsx-runtime";
+
+const assets = ["Sedan", "SUV / Large", "Truck / Van"];
+
+const tiers = [
+  {
+    name: "Maintenance Protocol",
+    desc: "Controlled preservation for well-maintained vehicles.",
+    scope: [
+      "Exterior hand wash + surface-safe drying",
+      "Wheel + tire cleaning",
+      "Interior vacuum + wipe-down",
+      "Glass cleaned inside + out"
+    ],
+  },
+  {
+    name: "Reset Protocol",
+    desc: "Surface recalibration for vehicles drifting from baseline condition.",
+    scope: [
+      "Decontamination wash process",
+      "Interior deep clean (surfaces + crevices)",
+      "Trim restoration treatment",
+      "Surface conditioning reset"
+    ],
+  },
+  {
+    name: "Full Reconditioning Protocol",
+    desc: "Comprehensive surface restoration and recalibration.",
+    scope: [
+      "Multi-stage decontamination",
+      "Interior extraction + detailing",
+      "Trim + plastics restoration",
+      "Full surface reconditioning process"
+    ],
+  },
+];
+---
+
+<div x-data="{ active: 0 }" class="mt-12">
+
+  <!-- Asset Tabs -->
+  <div class="flex flex-wrap gap-6 border-b border-border pb-4">
+    {assets.map((asset, i) => (
+      <button
+        class="text-sm uppercase tracking-wide"
+        :class="active === {i} ? 'text-text border-b-2 border-accent pb-2' : 'text-muted hover:text-text'"
+        @click="active = {i}"
+      >
+        {asset}
+      </button>
+    ))}
+  </div>
+
+  <!-- Tier Cards -->
+  <div class="mt-10 grid gap-8 md:grid-cols-3">
+    {tiers.map((tier) => (
+      <div class="border border-border p-8">
+        <h3 class="text-lg font-semibold">{tier.name}</h3>
+        <p class="mt-4 text-muted leading-relaxed">{tier.desc}</p>
+
+        <ul class="mt-6 space-y-2 text-sm text-muted leading-relaxed">
+          {tier.scope.map((item) => (
+            <li>• {item}</li>
+          ))}
+        </ul>
+
+        <p class="mt-6 text-sm text-text">
+          Investment determined by asset class · Non-negotiable protocol pricing
+        </p>
+      </div>
+    ))}
+  </div>
+
+  <!-- Pricing Policy -->
+  <div class="mt-12 border border-border p-6 text-sm text-muted leading-relaxed">
+    Pricing is fixed by protocol and asset class.
+    Scope is not modified to meet budget targets.
+    Planck may decline requests that do not align with protocol standards.
+  </div>
+
+</div>

@@ -1,0 +1,7 @@
+name = "planck-fyi"
+compatibility_date = "2025-01-01"
+
+[[r2_buckets]]
+binding = "INTAKE_BUCKET"
+bucket_name = "planck-intake"
+preview_bucket_name = "planck-intake"

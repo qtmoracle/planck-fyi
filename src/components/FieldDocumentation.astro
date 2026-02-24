@@ -1,0 +1,40 @@
+---
+const photos = [
+  { src: "/work/photo_2026-02-23_14-12-10.jpg", label: "Exterior" },
+  { src: "/work/photo_2026-02-23_14-12-22.jpg", label: "Wheels" },
+  { src: "/work/photo_2026-02-23_14-13-32.jpg", label: "Interior" },
+  { src: "/work/photo_2026-02-23_14-13-49.jpg", label: "Interior" },
+  { src: "/work/photo_2026-02-23_14-14-05.jpg", label: "Correction" },
+  { src: "/work/photo_2026-02-23_14-12-16.jpg", label: "Exterior" },
+];
+---
+
+<div class="mt-10">
+  <div class="flex items-end justify-between gap-6 flex-wrap">
+    <div>
+      <h2 class="text-3xl font-semibold">Field Documentation</h2>
+      <p class="mt-4 max-w-3xl text-muted leading-relaxed">
+        Real work. Real surfaces. Documented outcomes.
+      </p>
+    </div>
+    <div class="text-xs uppercase tracking-wider text-muted">
+      Evidence
+    </div>
+  </div>
+
+  <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {photos.map((p) => (
+      <figure class="border border-border overflow-hidden transition-transform duration-200 hover:-translate-y-1">
+        <img
+          src={p.src}
+          alt={`Planck field documentation — ${p.label}`}
+          loading="lazy"
+          class="h-60 w-full object-cover"
+        />
+        <figcaption class="px-4 py-3 text-xs uppercase tracking-wider text-muted">
+          {p.label}
+        </figcaption>
+      </figure>
+    ))}
+  </div>
+</div>
