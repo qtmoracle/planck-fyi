@@ -1,0 +1,4 @@
+# Example only — copy to .dev.vars (do not commit secrets)
+ADMIN_USER=
+ADMIN_PASS=
+TECH_TOKEN=
