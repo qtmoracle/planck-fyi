@@ -34,18 +34,89 @@ function page(title: string, body: string) {
     a{color:#111827;text-decoration:none}
     a:hover{text-decoration:underline}
     h1{font-size:18px;margin:0 0 12px}
+    h2{font-size:14px;margin:18px 0 10px}
     .muted{color:#6b7280}
     pre{background:#0b1220;color:#e5e7eb;padding:14px;border-radius:12px;overflow:auto;font-size:12px;line-height:1.45}
-    .row{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+    .row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
     .meta{font-size:12px;color:#6b7280}
     .photos{display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;}
-    .photos img{width:100%;height:auto;border-radius:8px;}
+    .photos .ph{border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-size:12px;color:#374151;background:#fafafa}
+    .pill{display:inline-block;border:1px solid #e5e7eb;border-radius:999px;padding:2px 10px;font-size:12px;color:#374151}
+    .pill.pending{background:#f9fafb}
+    .pill.approved{background:#ecfeff}
+    .pill.denied{background:#fef2f2}
+    .pill.queued{background:#f5f3ff}
+    .pill.completed{background:#f0fdf4}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    form{margin:0}
+    button{font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#111827;color:#fff;border-color:#111827;cursor:pointer}
+    button.secondary{background:#fff;color:#111827;border-color:#e5e7eb}
+    button.danger{background:#991b1b;border-color:#991b1b}
+    button.purple{background:#4c1d95;border-color:#4c1d95}
+    button.green{background:#166534;border-color:#166534}
+    button.blue{background:#1d4ed8;border-color:#1d4ed8}
+    button:hover{opacity:.92}
+    textarea{width:100%;min-height:90px;font-size:14px;padding:10px;border:1px solid #e5e7eb;border-radius:12px}
+    .card{border:1px solid #e5e7eb;border-radius:14px;padding:14px;margin:14px 0}
+    .kv{display:grid;grid-template-columns:160px 1fr;gap:8px 14px;font-size:14px}
+    .k{color:#6b7280}
+    input[type="date"],input[type="time"]{font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px}
+    .help{font-size:12px;color:#6b7280;margin-top:8px}
   </style>
 </head>
 <body>
   ${body}
 </body>
 </html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }});
+}
+
+type IntakeStateStatus = "pending" | "approved" | "denied" | "queued" | "completed";
+type IntakeState = {
+  id: string;
+  status: IntakeStateStatus;
+  updatedAt: string;
+  updatedBy: string;
+  notes?: string;
+  queue?: { position: number | null; scheduledFor: string | null };
+};
+
+const PACKET_PREFIX = "planck/intake_packets/INTAKE_PACKET_v0.01/";
+const STATE_PREFIX  = "planck/intake_state/INTAKE_STATE_v0.01/";
+
+function defaultState(id: string): IntakeState {
+  return {
+    id,
+    status: "pending",
+    updatedAt: new Date().toISOString(),
+    updatedBy: "system",
+    notes: "",
+    queue: { position: null, scheduledFor: null },
+  };
+}
+
+async function readState(bucket: R2Bucket, id: string): Promise<IntakeState> {
+  const key = `${STATE_PREFIX}${id}.json`;
+  const obj = await bucket.get(key);
+  if (!obj) return defaultState(id);
+  try {
+    const txt = await obj.text();
+    const s = JSON.parse(txt);
+    const status = String(s.status || "pending") as IntakeStateStatus;
+    if (!["pending","approved","denied","queued","completed"].includes(status)) return defaultState(id);
+    return {
+      id,
+      status,
+      updatedAt: String(s.updatedAt || new Date().toISOString()),
+      updatedBy: String(s.updatedBy || "admin"),
+      notes: typeof s.notes === "string" ? s.notes : "",
+      queue: {
+        position: (s.queue && typeof s.queue.position === "number") ? s.queue.position : null,
+        scheduledFor: (s.queue && typeof s.queue.scheduledFor === "string") ? s.queue.scheduledFor : null,
+      },
+    };
+  } catch {
+    return defaultState(id);
+  }
 }
 
 export const onRequestGet: PagesFunction = async (ctx) => {
@@ -63,8 +134,8 @@ export const onRequestGet: PagesFunction = async (ctx) => {
   const bucket: R2Bucket = env.INTAKE_BUCKET;
   if (!bucket) return page("Planck Admin", `<p class="muted">missing INTAKE_BUCKET binding</p>`);
 
-  const key = `planck/intake_packets/INTAKE_PACKET_v0.01/${id}.json`;
-  const obj = await bucket.get(key);
+  const packetKey = `${PACKET_PREFIX}${id}.json`;
+  const obj = await bucket.get(packetKey);
   if (!obj) {
     return page("Planck Admin", `<p class="muted">Not found.</p><p><a href="/admin">← Back</a></p>`);
   }
@@ -73,26 +144,118 @@ export const onRequestGet: PagesFunction = async (ctx) => {
   let pretty = txt;
   try { pretty = JSON.stringify(JSON.parse(txt), null, 2); } catch {}
 
-  const packet = JSON.parse(txt);
-  const photos = packet?.photos?.items || [];
+  let packet: any = null;
+  try { packet = JSON.parse(txt); } catch { packet = null; }
+  const photos = Array.isArray(packet?.photos?.items) ? packet.photos.items : [];
 
-  // Display photo previews
-  const photoPreviews = photos.map(photo => {
-    const photoUrl = `https://your-cf-r2-url/${photo.key}`;  // Replace with your actual R2 URL
-    return `<img src="${photoUrl}" alt="photo" />`;
-  }).join("");
+  const st = await readState(bucket, id);
+  const pillClass = `pill ${st.status}`;
+
+  const contact = packet?.data?.contact || {};
+  const asset = packet?.data?.asset || {};
+  const requestData = packet?.data?.request || {};
 
   const body = `
     <div class="row">
-      <h1>Intake Packet</h1>
-      <div class="meta">${esc(key)}</div>
+      <div>
+        <h1>Intake Packet</h1>
+        <div class="meta">${esc(packetKey)}</div>
+      </div>
+      <div class="actions">
+        <span class="${pillClass}">${esc(st.status)}</span>
+        <a class="meta" href="/admin">← Back to list</a>
+      </div>
     </div>
-    <p><a href="/admin">← Back to list</a></p>
-    <h2>Photos:</h2>
-    <div class="photos">
-      ${photoPreviews || "<p>No photos available.</p>"}
+
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <h2 style="margin:0">Admin Actions</h2>
+        <div class="meta">Sidecar only — packet is immutable</div>
+      </div>
+
+      <form method="POST" action="/admin/state/${encodeURIComponent(id)}">
+        <div class="kv" style="margin-top:12px">
+          <div class="k">Notes</div>
+          <div><textarea name="notes" placeholder="Internal notes (optional)">${esc(st.notes || "")}</textarea></div>
+
+          <div class="k">Queue Position</div>
+          <div>
+            <input name="queue_position" type="number" min="1" step="1" value="${st.queue?.position ?? ""}" style="font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;width:160px" />
+            <span class="meta">optional</span>
+          </div>
+
+          <div class="k">Scheduled For</div>
+          <div>
+            <input name="scheduled_for" type="datetime-local" value="${st.queue?.scheduledFor ? esc(st.queue.scheduledFor.slice(0,16)) : ""}" style="font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px" />
+            <span class="meta">optional</span>
+          </div>
+        </div>
+
+        <div class="actions" style="margin-top:12px">
+          <button name="action" value="approve" class="secondary">Approve</button>
+          <button name="action" value="deny" class="danger">Deny</button>
+          <button name="action" value="queue" class="purple">Queue</button>
+          <button name="action" value="complete" class="green">Complete</button>
+        </div>
+
+        <div class="meta" style="margin-top:10px">
+          Updated: ${esc(st.updatedAt)} · By: ${esc(st.updatedBy)}
+        </div>
+      </form>
     </div>
-    <h2>Full Submission Data:</h2>
+
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <h2 style="margin:0">Create Job (JOB_PACKET v0.01)</h2>
+        <div class="meta">Creates immutable job packet + job sidecar (separate from intake)</div>
+      </div>
+
+      <form method="POST" action="/admin/job/create/${encodeURIComponent(id)}" style="margin-top:12px">
+        <div class="kv">
+          <div class="k">Day</div>
+          <div><input type="date" name="day" required /></div>
+
+          <div class="k">Start</div>
+          <div><input type="time" name="start" required /></div>
+
+          <div class="k">End</div>
+          <div><input type="time" name="end" required /></div>
+        </div>
+
+        <div class="actions" style="margin-top:12px">
+          <button class="blue" type="submit">Create Job</button>
+        </div>
+
+        <div class="help">
+          Single-tech mode: one active job at a time. This will mint <span class="meta">JOB_PACKET_v0.01</span>.
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px">Summary</h2>
+      <div class="kv">
+        <div class="k">Name</div><div>${esc(String(contact?.name || "—"))}</div>
+        <div class="k">Email</div><div>${esc(String(contact?.email || "—"))}</div>
+        <div class="k">Method</div><div>${esc(String(contact?.method || "—"))}</div>
+        <div class="k">Phone</div><div>${esc(String(contact?.phone || "—"))}</div>
+        <div class="k">Asset</div><div>${esc(String(asset?.details || "—"))}</div>
+        <div class="k">Tier</div><div>${esc(String(requestData?.tier || "—"))}</div>
+        <div class="k">Service Area</div><div>${esc(String(requestData?.service_area || "—"))}</div>
+        <div class="k">Preferred Days</div><div>${esc(String(requestData?.preferred_days || "—"))}</div>
+        <div class="k">Preferred Window</div><div>${esc(String(requestData?.preferred_window || "—"))}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px">Photos</h2>
+      <div class="meta">Preview disabled until Step 3 media route. Showing keys only.</div>
+      <div class="photos" style="margin-top:10px">
+        ${photos.map((p: any) => `<div class="ph">${esc(String(p?.category || "photo"))}<br/><span class="meta">${esc(String(p?.key || ""))}</span></div>`).join("") || `<p class="muted">No photos available.</p>`}
+      </div>
+    </div>
+
+    <h2>Full Submission Data</h2>
     <pre>${esc(pretty)}</pre>
   `;
 
