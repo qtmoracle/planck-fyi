@@ -7,6 +7,17 @@
 // Storage: R2 env.INTAKE_BUCKET
 // Auth: TECH_TOKEN via header: x-tech-token: <token>
 
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET,POST,OPTIONS",
+  "access-control-allow-headers": "content-type, x-tech-token",
+  "access-control-max-age": "86400",
+};
+
+export const onRequestOptions: PagesFunction = async () => {
+  return new Response(null, { status: 204, headers: CORS });
+};
+
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
     const { request, env } = ctx;
@@ -15,7 +26,7 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     const required = String(env?.TECH_TOKEN || "");
     const provided = String(request.headers.get("x-tech-token") || "");
     if (!required || provided !== required) {
-      return new Response("Unauthorized", { status: 401 });
+      return text("Unauthorized", 401);
     }
 
     // 1) R2 binding
@@ -35,7 +46,7 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     } catch {
       body = null;
     }
-    const notes = (body && typeof body.notes === "string") ? body.notes : "";
+    const notes = body && typeof body.notes === "string" ? body.notes : "";
 
     // 3) Find most recent active job state
     const statePrefix = "planck/job_state/JOB_STATE_v0.01/";
@@ -162,10 +173,21 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
 /* ---------------- helpers ---------------- */
 
+function withCors(headers: Record<string, string> = {}) {
+  return { ...CORS, ...headers };
+}
+
 function json(obj: any, status = 200) {
   return new Response(JSON.stringify(obj, null, 2), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: withCors({ "content-type": "application/json; charset=utf-8" }),
+  });
+}
+
+function text(msg: string, status = 200) {
+  return new Response(msg, {
+    status,
+    headers: withCors({ "content-type": "text/plain; charset=utf-8" }),
   });
 }
 

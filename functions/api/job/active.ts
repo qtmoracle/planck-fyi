@@ -1,20 +1,9 @@
-// functions/api/job/current.ts
-// GET /api/job/current
+// functions/api/job/active.ts
+// GET /api/job/active
 //
-// Single-tech mode. Returns most recent queued job.
+// Single-tech mode. Returns most recent active job (by claimed_at).
 // Storage: R2 env.INTAKE_BUCKET
 // Auth: TECH_TOKEN via header: x-tech-token: <token>
-
-const CORS = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
-  "access-control-allow-headers": "content-type, x-tech-token",
-  "access-control-max-age": "86400",
-};
-
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, { status: 204, headers: CORS });
-};
 
 export const onRequestGet: PagesFunction = async (ctx) => {
   try {
@@ -24,7 +13,7 @@ export const onRequestGet: PagesFunction = async (ctx) => {
     const required = String(env?.TECH_TOKEN || "");
     const provided = String(request.headers.get("x-tech-token") || "");
     if (!required || provided !== required) {
-      return text("Unauthorized", 401);
+      return new Response("Unauthorized", { status: 401 });
     }
 
     // 1) R2 binding
@@ -36,32 +25,30 @@ export const onRequestGet: PagesFunction = async (ctx) => {
       );
     }
 
-    // 2) List job state objects
-    const prefix = "planck/job_state/JOB_STATE_v0.01/";
-    const listed = await bucket.list({ prefix, limit: 1000 });
+    // 2) Find most recent active job state
+    const statePrefix = "planck/job_state/JOB_STATE_v0.01/";
+    const listed = await bucket.list({ prefix: statePrefix, limit: 1000 });
     const keys: string[] = (listed?.objects || [])
       .map((o: any) => String(o?.key || ""))
       .filter(Boolean);
 
-    // 3) Find most recent queued job
-    let best: any = null;
+    let best: { _t: number; key: string; state: any } | null = null;
 
     for (const key of keys) {
       const st = await r2GetJSON(bucket, key);
       if (!st) continue;
-      const status = String(st?.status || "").toLowerCase();
-      if (status !== "queued") continue;
 
-      const t = Date.parse(String(st?.queued_at || st?.last_updated_at || ""));
+      const status = String(st?.status || "").toLowerCase();
+      if (status !== "active") continue;
+
+      const t = Date.parse(String(st?.claimed_at || st?.last_updated_at || st?.queued_at || ""));
       if (!Number.isFinite(t)) continue;
 
-      if (!best || t > best._t) {
-        best = { _t: t, key, state: st };
-      }
+      if (!best || t > best._t) best = { _t: t, key, state: st };
     }
 
     if (!best) {
-      return json({ ok: true, job: null, note: "no_queued_jobs" }, 200);
+      return json({ ok: true, job: null, note: "no_active_jobs" }, 200);
     }
 
     const jobId = String(best.state?.job_id || "");
@@ -69,7 +56,7 @@ export const onRequestGet: PagesFunction = async (ctx) => {
       return json({ ok: false, error: "job_state_missing_job_id", key: best.key }, 500);
     }
 
-    // 4) Load immutable job packet
+    // 3) Load immutable job packet
     const jobPacketKey = `planck/job_packets/JOB_PACKET_v0.01/${jobId}.json`;
     const jobPacket = await r2GetJSON(bucket, jobPacketKey);
     if (!jobPacket) {
@@ -97,21 +84,10 @@ export const onRequestGet: PagesFunction = async (ctx) => {
 
 /* ---------------- helpers ---------------- */
 
-function withCors(headers: Record<string, string> = {}) {
-  return { ...CORS, ...headers };
-}
-
 function json(obj: any, status = 200) {
   return new Response(JSON.stringify(obj, null, 2), {
     status,
-    headers: withCors({ "content-type": "application/json; charset=utf-8" }),
-  });
-}
-
-function text(msg: string, status = 200) {
-  return new Response(msg, {
-    status,
-    headers: withCors({ "content-type": "text/plain; charset=utf-8" }),
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
 
