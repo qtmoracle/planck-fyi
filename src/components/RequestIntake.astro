@@ -11,6 +11,14 @@ const ENDPOINTS = {
 };
 
 const DRAFT_KEY = "planck_intake_draft_v0_01";
+
+// Phase 0: stable machine ids (backward compatible; keep tier label too)
+const TIER_ID_BY_LABEL = {
+  "Maintenance Protocol": "maintenance",
+  "Correction Protocol": "correction",
+  "Full Surface Reset": "reset",
+  "Not sure — recommend": "recommend",
+};
 ---
 
 <section id="request" class="scroll-mt-24">
@@ -529,6 +537,7 @@ const DRAFT_KEY = "planck_intake_draft_v0_01";
             },
             request: {
               tier: fields.tier || "",
+              tier_id: TIER_ID_BY_LABEL[fields.tier] || "",
               service_area: fields.service_area || "",
               preferred_days: fields.preferred_days || "",
               preferred_window: fields.preferred_window || ""

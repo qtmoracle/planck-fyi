@@ -12,7 +12,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
     const emailEnabled = Boolean(RESEND_API_KEY && RESEND_FROM && RESEND_TO);
 
-
     const packet = await request.json().catch(() => null);
     if (!packet) return json({ ok: false, error: "invalid_json" }, 400);
 
@@ -33,7 +32,21 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
     if (!c?.name || !c?.email || !c?.method) return json({ ok: false, error: "missing_contact" }, 400);
     if (!a?.class || !a?.details) return json({ ok: false, error: "missing_asset" }, 400);
-    if (!r?.tier || !r?.service_area) return json({ ok: false, error: "missing_request" }, 400);
+
+    // Phase 0 backward compatible:
+    // accept tier label OR tier_id (prefer both, but do not require both)
+    const hasTier = Boolean(r?.tier) || Boolean(r?.tier_id);
+    if (!hasTier || !r?.service_area) {
+      return json({ ok: false, error: "missing_request" }, 400);
+    }
+
+    // Optional light allowlist to keep junk out (still Phase 0)
+    const tierId = String(r?.tier_id || "").trim();
+    const allowedTierIds = new Set(["maintenance", "correction", "reset", "recommend", ""]);
+    if (tierId && !allowedTierIds.has(tierId)) {
+      return json({ ok: false, error: "invalid_tier_id" }, 400);
+    }
+
     if (!n?.condition) return json({ ok: false, error: "missing_condition_notes" }, 400);
 
     if (ack?.approval_gated !== true || ack?.base_rate_for_partials !== true || ack?.photo_required !== true) {
@@ -59,22 +72,22 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     const text = buildEmailText(packet, packetKey);
 
     if (emailEnabled) {
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: RESEND_FROM,
-      to: [RESEND_TO],
-      subject,
-      text,
-    }),
-  });
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: RESEND_FROM,
+          to: [RESEND_TO],
+          subject,
+          text,
+        }),
+      });
 
-  if (!resp.ok) return json({ ok: false, error: "email_send_failed" }, 500);
-}
+      if (!resp.ok) return json({ ok: false, error: "email_send_failed" }, 500);
+    }
 
     return json({ ok: true, received: true, id, email_sent: emailEnabled }, 200);
   } catch {
@@ -107,7 +120,8 @@ function buildEmailText(packet: any, packetKey: string) {
     `Details: ${a.details}`,
     "",
     "REQUEST",
-    `Tier: ${r.tier}`,
+    `Tier: ${r.tier || ""}`,
+    `Tier ID: ${r.tier_id || ""}`,
     `Service area: ${r.service_area}`,
     `Preferred days: ${r.preferred_days || ""}`,
     `Preferred window: ${r.preferred_window || ""}`,
