@@ -1,0 +1,61 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const items = [
+  { src: "/work/auto_gallery/Cadillac-SUV.png", alt: "Interior documentation — Cadillac SUV", caption: "Interior documentation" },
+  { src: "/work/auto_gallery/Cayenne.png", alt: "Porsche Cayenne interior documentation", caption: "Cayenne interior" },
+  { src: "/work/auto_gallery/Cayenne-Dash.png", alt: "Porsche Cayenne dash / cluster clarity", caption: "Dash / cluster" },
+  { src: "/work/auto_gallery/Console.png", alt: "Console surface clarity", caption: "Console clarity" },
+  { src: "/work/auto_gallery/Passenger-Floor.jpg", alt: "Passenger floor carpet reset", caption: "Carpet reset" },
+  { src: "/work/auto_gallery/Converible.jpg", alt: "Convertible interior documentation", caption: "Convertible interior" },
+  { src: "/work/auto_gallery/Convertible-Rear.jpg", alt: "Convertible rear seating finish", caption: "Rear seating finish" },
+  { src: "/work/auto_gallery/Truck-Interior-Front.jpg", alt: "Truck front cabin reset", caption: "Front cabin reset" },
+  { src: "/work/auto_gallery/Truck-Passenger.jpg", alt: "Truck passenger-side reset", caption: "Passenger-side reset" },
+  { src: "/work/auto_gallery/Truck-Rear-Cabin.jpg", alt: "Truck rear cabin reset", caption: "Rear cabin reset" },
+  { src: "/work/auto_gallery/Truck-Cabin-Floor-Rear.jpg", alt: "Truck rear floor + mat reset", caption: "Rear floor reset" },
+];
+---
+
+<BaseLayout title="Gallery — Planck Surface Engineers">
+  <main>
+    <section class="py-16 sm:py-24">
+      <div class="mx-auto max-w-content px-4 sm:px-6">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight">
+              Field Documentation
+            </h1>
+            <p class="mt-4 max-w-3xl text-muted leading-relaxed">
+              Documentation-first. Condition-based execution. Real vehicles, real surfaces.
+            </p>
+          </div>
+
+          <a
+            href="/#gallery"
+            class="inline-flex items-center justify-center px-0 py-2 text-sm text-text hover:text-accent transition-colors"
+          >
+            ← Back to home
+          </a>
+        </div>
+
+        <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((it) => (
+            <figure class="border border-border overflow-hidden bg-bg/30">
+              <a href={it.src} target="_blank" rel="noopener">
+                <img
+                  src={it.src}
+                  alt={it.alt}
+                  loading="lazy"
+                  class="aspect-[4/3] w-full object-cover"
+                />
+              </a>
+              <figcaption class="px-4 py-3 text-xs text-muted">
+                {it.caption}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

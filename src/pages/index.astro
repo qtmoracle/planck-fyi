@@ -1,62 +1,114 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ServiceMatrix from "../components/ServiceMatrix.astro";
-import FieldDocumentation from "../components/FieldDocumentation.astro";
 import RequestIntake from "../components/RequestIntake.astro";
 ---
 
 <BaseLayout title="Planck Surface Engineers">
   <main>
 
-    <!-- HERO + RIGHT RAIL -->
-    <section class="py-16 sm:py-24">
+    <!-- HERO -->
+    <section class="relative overflow-hidden min-h-[75vh] py-16 sm:py-24">
+
+      <!-- Background Image -->
+      <div class="absolute inset-0 -z-10">
+        <img
+          src="/brand/hero-background.png"
+          alt=""
+          class="h-full w-full object-cover"
+          loading="eager"
+        />
+        <!-- Overlay -->
+        <div class="absolute inset-0 bg-gradient-to-b from-bg/80 via-bg/65 to-bg/80"></div>
+      </div>
+
       <div class="mx-auto max-w-content px-4 sm:px-6">
         <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
           <div class="lg:col-span-8">
-            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tightest leading-tight">
+
+            <p class="text-xs uppercase tracking-wider text-muted">
+              Appointment-only · Mobile service
+            </p>
+
+            <h1 class="mt-4 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tightest leading-tight">
               Surface Discipline.<br />Preserved Value.
             </h1>
 
-            <p class="mt-8 max-w-2xl text-lg text-muted leading-relaxed">
-              Structured execution for vehicles that deserve precision.
+            <p class="mt-7 max-w-2xl text-lg text-muted leading-relaxed">
+              Structured execution for vehicles that deserve precision. Documentation-first.
+              Condition-based approvals. No shortcuts.
             </p>
 
-            <div class="mt-12">
+            <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
               <a
                 href="#request"
-                class="inline-block border border-border px-10 py-4 hover:border-accent transition-colors"
+                class="inline-flex items-center justify-center border border-border px-8 py-4 hover:border-accent transition-colors"
               >
                 Request Appointment
               </a>
+
+              <a
+                href="#services"
+                class="inline-flex items-center justify-center px-8 py-4 text-sm text-text hover:text-accent transition-colors"
+              >
+                View Service Options →
+              </a>
+            </div>
+
+            <div class="mt-10 grid gap-3 sm:grid-cols-3 max-w-2xl">
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs uppercase tracking-wider text-muted">Protocol</p>
+                <p class="mt-2 text-sm text-text">Fixed scope. Fixed standards.</p>
+              </div>
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs uppercase tracking-wider text-muted">Outcome</p>
+                <p class="mt-2 text-sm text-text">Clean surfaces. Preserved value.</p>
+              </div>
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs uppercase tracking-wider text-muted">Trust</p>
+                <p class="mt-2 text-sm text-text">Real photos. Real results.</p>
+              </div>
             </div>
 
             <p class="mt-10 text-sm text-muted">
-              Appointment-only · Pinecrest · Coral Gables · South Miami · Kendall
+              Pinecrest · Coral Gables · South Miami · Kendall
             </p>
+
           </div>
 
           <aside class="lg:col-span-4">
-            <div class="border border-border p-8 space-y-6">
+            <div class="border border-border p-8 space-y-6 bg-bg/50 backdrop-blur-sm">
               <div>
                 <p class="text-xs uppercase tracking-wider text-muted">Availability</p>
                 <p class="mt-2 text-sm text-text">
-                  Weekly capacity is intentionally limited.
+                  Weekly capacity is intentionally limited. Requests are reviewed.
                 </p>
               </div>
 
               <div class="border-t border-border pt-6">
-                <p class="text-xs uppercase tracking-wider text-muted">Service Area</p>
-                <p class="mt-2 text-sm text-text">
-                  Pinecrest · Coral Gables · South Miami · Kendall
-                </p>
+                <p class="text-xs uppercase tracking-wider text-muted">What We Do</p>
+                <ul class="mt-3 space-y-2 text-sm text-muted leading-relaxed">
+                  <li>• Interior resets (condition-based)</li>
+                  <li>• Exterior wash + decon (non-correction)</li>
+                  <li>• Wheels / trim / glass discipline</li>
+                </ul>
+              </div>
+
+              <div class="border-t border-border pt-6">
+                <p class="text-xs uppercase tracking-wider text-muted">What We Don’t Do</p>
+                <ul class="mt-3 space-y-2 text-sm text-muted leading-relaxed">
+                  <li>• Paint correction / compounding</li>
+                  <li>• “Rush jobs” or scope negotiation</li>
+                  <li>• Unreasonable condition surprises</li>
+                </ul>
               </div>
 
               <div class="border-t border-border pt-6">
                 <p class="text-xs uppercase tracking-wider text-muted">Standards</p>
-                <ul class="mt-2 space-y-2 text-sm text-muted leading-relaxed">
-                  <li>Approval is subject to condition + schedule alignment.</li>
-                  <li>Fixed protocol pricing. No scope negotiation.</li>
-                  <li>Work is scheduled to protect standards.</li>
+                <ul class="mt-3 space-y-2 text-sm text-muted leading-relaxed">
+                  <li>• Approval depends on condition + schedule alignment.</li>
+                  <li>• Safe parking + working space required.</li>
+                  <li>• Photos required for review.</li>
                 </ul>
               </div>
             </div>
@@ -66,88 +118,78 @@ import RequestIntake from "../components/RequestIntake.astro";
     </section>
 
     <!-- SERVICES -->
-    <section class="py-24 border-t border-border">
+    <section id="services" class="py-24 border-t border-border">
       <div class="mx-auto max-w-content px-4 sm:px-6">
-        <h2 class="text-3xl font-semibold">Engineered Surface Protocols</h2>
-        <p class="mt-4 max-w-3xl text-muted leading-relaxed">
-          Three asset classes. Three execution tiers. Fixed, transparent protocol pricing.
-        </p>
+
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 class="text-3xl font-semibold">Engineered Surface Protocols</h2>
+            <p class="mt-4 max-w-3xl text-muted leading-relaxed">
+              Three asset classes. Three execution tiers. Fixed protocol pricing.
+              We protect quality by protecting scope.
+            </p>
+          </div>
+
+          <a
+            href="#request"
+            class="inline-flex items-center justify-center border border-border px-6 py-3 hover:border-accent transition-colors"
+          >
+            Request →
+          </a>
+        </div>
 
         <div class="mt-12">
           <ServiceMatrix />
         </div>
+
       </div>
     </section>
 
     <!-- GALLERY -->
     <section id="gallery" class="py-24 border-t border-border">
       <div class="mx-auto max-w-content px-4 sm:px-6">
-        <h2 class="text-3xl font-semibold">Recent Work</h2>
-        <p class="mt-4 max-w-3xl text-muted leading-relaxed">
-          Condition-based execution. Documentation-first. Real results.
-        </p>
+
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 class="text-3xl font-semibold">Recent Work</h2>
+            <p class="mt-4 max-w-3xl text-muted leading-relaxed">
+              Condition-based execution. Documentation-first. Real results.
+            </p>
+          </div>
+
+          <a
+            href="/gallery"
+            class="inline-flex items-center justify-center px-0 py-2 text-sm text-text hover:text-accent transition-colors"
+          >
+            View full gallery →
+          </a>
+        </div>
 
         <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-
           <div class="border border-border overflow-hidden">
-            <img
-              src="/work/bmw-front.jpg"
-              alt="Exterior front — documented finish"
-              loading="lazy"
-              class="aspect-[4/3] w-full object-cover"
-            />
+            <img src="/work/bmw-front.jpg" alt="" class="aspect-[4/3] w-full object-cover" loading="lazy" />
           </div>
-
           <div class="border border-border overflow-hidden">
-            <img
-              src="/work/bmw-wheel.jpg"
-              alt="Wheels — brake dust reset"
-              loading="lazy"
-              class="aspect-[4/3] w-full object-cover"
-            />
+            <img src="/work/bmw-wheel.jpg" alt="" class="aspect-[4/3] w-full object-cover" loading="lazy" />
           </div>
-
           <div class="border border-border overflow-hidden">
-            <img
-              src="/work/bmw-interior.jpg"
-              alt="Interior — reset pass"
-              loading="lazy"
-              class="aspect-[4/3] w-full object-cover"
-            />
+            <img src="/work/bmw-interior.jpg" alt="" class="aspect-[4/3] w-full object-cover" loading="lazy" />
           </div>
-
           <div class="border border-border overflow-hidden">
-            <img
-              src="/work/cayenne-ambient.jpg"
-              alt="Interior ambient detail"
-              loading="lazy"
-              class="aspect-[4/3] w-full object-cover"
-            />
+            <img src="/work/cayenne-ambient.jpg" alt="" class="aspect-[4/3] w-full object-cover" loading="lazy" />
           </div>
-
           <div class="border border-border overflow-hidden">
-            <img
-              src="/work/roof-contamination.jpg"
-              alt="Roof contamination assessment"
-              loading="lazy"
-              class="aspect-[4/3] w-full object-cover"
-            />
+            <img src="/work/roof-contamination.jpg" alt="" class="aspect-[4/3] w-full object-cover" loading="lazy" />
           </div>
-
           <div class="border border-border overflow-hidden">
-            <img
-              src="/work/bmw-headlight.jpg"
-              alt="Headlight reset"
-              loading="lazy"
-              class="aspect-[4/3] w-full object-cover"
-            />
+            <img src="/work/bmw-headlight.jpg" alt="" class="aspect-[4/3] w-full object-cover" loading="lazy" />
           </div>
-
         </div>
+
       </div>
     </section>
 
-    <!-- REQUEST (INTAKE FORM) -->
+    <!-- REQUEST -->
     <section class="py-24 border-t border-border">
       <div class="mx-auto max-w-content px-4 sm:px-6">
         <RequestIntake />

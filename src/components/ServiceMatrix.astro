@@ -1,7 +1,9 @@
 ---
-import { useState } from "astro/jsx-runtime";
-
-const assets = ["Sedan", "SUV / Large", "Truck / Van"];
+const assets = [
+  { label: "Sedan", key: "sedan" },
+  { label: "SUV / Large", key: "suv" },
+  { label: "Truck / Van", key: "truck" },
+];
 
 const tiers = [
   {
@@ -11,8 +13,9 @@ const tiers = [
       "Exterior hand wash + surface-safe drying",
       "Wheel + tire cleaning",
       "Interior vacuum + wipe-down",
-      "Glass cleaned inside + out"
+      "Glass cleaned inside + out",
     ],
+    prices: { sedan: 175, suv: 225, truck: 275 },
   },
   {
     name: "Reset Protocol",
@@ -21,8 +24,9 @@ const tiers = [
       "Decontamination wash process",
       "Interior deep clean (surfaces + crevices)",
       "Trim restoration treatment",
-      "Surface conditioning reset"
+      "Surface conditioning reset",
     ],
+    prices: { sedan: 275, suv: 325, truck: 375 },
   },
   {
     name: "Full Reconditioning Protocol",
@@ -31,33 +35,78 @@ const tiers = [
       "Multi-stage decontamination",
       "Interior extraction + detailing",
       "Trim + plastics restoration",
-      "Full surface reconditioning process"
+      "Full surface reconditioning process",
     ],
+    prices: { sedan: 375, suv: 425, truck: 475 },
   },
 ];
+
+function fmtUSD(n) {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+  } catch {
+    return `$${n}`;
+  }
+}
+
+const initialKey = "sedan";
 ---
 
-<div x-data="{ active: 0 }" class="mt-12">
-
-  <!-- Asset Tabs -->
-  <div class="flex flex-wrap gap-6 border-b border-border pb-4">
-    {assets.map((asset, i) => (
+<section id="service-matrix" class="relative mt-12 isolate" data-active={initialKey}>
+  {/* Asset Tabs */}
+  <div class="relative z-20 flex flex-wrap gap-6 border-b border-border pb-4 pointer-events-auto">
+    {assets.map((a) => (
       <button
-        class="text-sm uppercase tracking-wide"
-        :class="active === {i} ? 'text-text border-b-2 border-accent pb-2' : 'text-muted hover:text-text'"
-        @click="active = {i}"
+        type="button"
+        data-asset-btn
+        data-key={a.key}
+        aria-pressed={a.key === initialKey ? "true" : "false"}
+        class={[
+          "text-sm uppercase tracking-wide pb-2 transition-colors",
+          a.key === initialKey
+            ? "text-text border-b-2 border-accent"
+            : "text-muted hover:text-text",
+        ].join(" ")}
       >
-        {asset}
+        {a.label}
       </button>
     ))}
   </div>
 
-  <!-- Tier Cards -->
+  {/* Tier Cards */}
   <div class="mt-10 grid gap-8 md:grid-cols-3">
     {tiers.map((tier) => (
-      <div class="border border-border p-8">
-        <h3 class="text-lg font-semibold">{tier.name}</h3>
-        <p class="mt-4 text-muted leading-relaxed">{tier.desc}</p>
+      <div class="group relative overflow-hidden rounded-2xl border border-border bg-bg/40 p-8 transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-2xl">
+        {/* subtle top accent */}
+        <div class="absolute left-0 top-0 h-[3px] w-full bg-accent/60 opacity-60 transition-opacity group-hover:opacity-100"></div>
+
+        {/* price badge */}
+        <div class="absolute right-6 top-6 rounded-xl border border-border bg-bg/70 px-4 py-3 text-right backdrop-blur-sm">
+          <p class="text-[11px] uppercase tracking-wider text-muted">Starting</p>
+
+          <p class="mt-1 text-base font-semibold text-text">
+            <span
+              data-price
+              data-sedan={String(tier.prices.sedan)}
+              data-suv={String(tier.prices.suv)}
+              data-truck={String(tier.prices.truck)}
+            >
+              {fmtUSD(tier.prices[initialKey])}
+            </span>
+          </p>
+
+          <p class="mt-1 text-[12px] text-muted leading-snug">
+            <span data-label>{assets.find((a) => a.key === initialKey)?.label ?? "Sedan"}</span>
+          </p>
+
+          {/* surcharge note (ALL protocols) */}
+          <p class="mt-2 text-[12px] text-muted leading-snug">
+            <span data-note></span>
+          </p>
+        </div>
+
+        <h3 class="pr-28 text-lg font-semibold">{tier.name}</h3>
+        <p class="mt-4 pr-28 text-muted leading-relaxed">{tier.desc}</p>
 
         <ul class="mt-6 space-y-2 text-sm text-muted leading-relaxed">
           {tier.scope.map((item) => (
@@ -72,11 +121,142 @@ const tiers = [
     ))}
   </div>
 
-  <!-- Pricing Policy -->
-  <div class="mt-12 border border-border p-6 text-sm text-muted leading-relaxed">
-    Pricing is fixed by protocol and asset class.
-    Scope is not modified to meet budget targets.
-    Planck may decline requests that do not align with protocol standards.
+  {/* Pricing policy + Add-ons */}
+  <div class="mt-12 grid gap-6 lg:grid-cols-3">
+    {/* ✅ add visual “color/presence” back */}
+    <div class="lg:col-span-2 relative overflow-hidden rounded-2xl border border-border bg-bg/40 p-6">
+      {/* accent rail */}
+      <div class="pointer-events-none absolute inset-y-0 left-0 w-1 bg-accent/70"></div>
+      {/* soft gradient wash */}
+      <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-accent/12 via-bg/0 to-bg/0"></div>
+
+      <div class="relative flex items-start gap-3">
+        <div class="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-accent/30 bg-accent/10">
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M12 3l8 4v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z" />
+          </svg>
+        </div>
+
+        <div>
+          <p class="text-xs uppercase tracking-wider text-muted">Pricing policy</p>
+          <p class="mt-1 text-sm font-semibold text-text">Fixed protocol pricing. Scope is protected.</p>
+          <p class="mt-2 text-sm text-muted leading-relaxed">
+            Pricing is fixed by protocol and asset class. Scope is not modified to meet budget targets.
+            Planck may decline requests that do not align with protocol standards.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-border bg-bg/40 p-6">
+      <p class="text-xs uppercase tracking-wider text-muted">Add-ons</p>
+      <p class="mt-1 text-sm font-semibold text-text">Optional scheduling upgrades</p>
+
+      <div class="mt-4 space-y-3 text-sm text-muted">
+        <div class="flex items-center justify-between gap-4">
+          <span>24-Hour Priority Scheduling</span>
+          <span class="text-text font-medium">+ {fmtUSD(500)}</span>
+        </div>
+        <div class="flex items-center justify-between gap-4">
+          <span>Same-Day Emergency Service</span>
+          <span class="text-text font-medium">+ {fmtUSD(1000)}</span>
+        </div>
+      </div>
+
+      <p class="mt-4 text-xs text-muted leading-relaxed">
+        Subject to availability and safe working conditions.
+      </p>
+    </div>
   </div>
 
-</div>
+  {/* Steps */}
+  <div class="mt-10 grid gap-6 md:grid-cols-3">
+    <div class="rounded-2xl border border-border bg-bg/40 p-6">
+      <p class="text-xs uppercase tracking-wider text-muted">Step 1</p>
+      <p class="mt-2 text-sm font-semibold text-text">Submit request + photos</p>
+      <p class="mt-2 text-sm text-muted">Exterior + interior photos determine fit and scope.</p>
+    </div>
+
+    <div class="rounded-2xl border border-border bg-bg/40 p-6">
+      <p class="text-xs uppercase tracking-wider text-muted">Step 2</p>
+      <p class="mt-2 text-sm font-semibold text-text">Approval + time window</p>
+      <p class="mt-2 text-sm text-muted">You receive a confirmed window and prep notes.</p>
+    </div>
+
+    <div class="rounded-2xl border border-border bg-bg/40 p-6">
+      <p class="text-xs uppercase tracking-wider text-muted">Step 3</p>
+      <p class="mt-2 text-sm font-semibold text-text">Execute protocol</p>
+      <p class="mt-2 text-sm text-muted">Disciplined process. Documented outcome.</p>
+    </div>
+  </div>
+
+  <script is:inline>
+    (() => {
+      const root = document.getElementById("service-matrix");
+      if (!root) return;
+
+      const btns = root.querySelectorAll("[data-asset-btn]");
+      const priceEls = root.querySelectorAll("[data-price]");
+      const labelEls = root.querySelectorAll("[data-label]");
+      const noteEls = root.querySelectorAll("[data-note]");
+
+      const fmtUSD = (n) => {
+        try {
+          return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+        } catch {
+          return "$" + n;
+        }
+      };
+
+      const labelByKey = {
+        sedan: "Sedan",
+        suv: "SUV / Large",
+        truck: "Truck / Van",
+      };
+
+      // applies to ALL protocols
+      const noteByKey = {
+        sedan: "",
+        suv: "+$50 per 3rd row",
+        truck: "+$50 per extra axle",
+      };
+
+      function setActive(key) {
+        root.dataset.active = key;
+
+        btns.forEach((b) => {
+          const isActive = b.getAttribute("data-key") === key;
+          b.setAttribute("aria-pressed", isActive ? "true" : "false");
+          b.classList.toggle("text-text", isActive);
+          b.classList.toggle("border-b-2", isActive);
+          b.classList.toggle("border-accent", isActive);
+          b.classList.toggle("text-muted", !isActive);
+        });
+
+        priceEls.forEach((el) => {
+          const raw = el.getAttribute(`data-${key}`);
+          const num = raw ? Number(raw) : NaN;
+          if (!Number.isNaN(num)) el.textContent = fmtUSD(num);
+        });
+
+        labelEls.forEach((el) => {
+          el.textContent = labelByKey[key] || "Sedan";
+        });
+
+        noteEls.forEach((el) => {
+          el.textContent = noteByKey[key] || "";
+        });
+      }
+
+      btns.forEach((b) => {
+        b.addEventListener("click", (e) => {
+          e.preventDefault();
+          const key = b.getAttribute("data-key");
+          if (key) setActive(key);
+        });
+      });
+
+      setActive(root.dataset.active || "sedan");
+    })();
+  </script>
+</section>
