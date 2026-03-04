@@ -60,7 +60,7 @@ function page(title: string, body: string) {
 </html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }});
 }
 
-type IntakeStateStatus = "pending" | "approved" | "denied" | "queued" | "completed";
+type IntakeStateStatus = "pending" | "approved" | "denied" | "queued" | "completed" | "archived";
 type IntakeState = {
   id: string;
   status: IntakeStateStatus;
@@ -93,7 +93,7 @@ async function readState(bucket: R2Bucket, id: string): Promise<IntakeState> {
     const s = JSON.parse(txt);
     if (!s || typeof s !== "object") return defaultState(id);
     const status = String(s.status || "pending") as IntakeStateStatus;
-    if (!["pending","approved","denied","queued","completed"].includes(status)) return defaultState(id);
+    if (!["pending","approved","denied","queued","completed","archived"].includes(status)) return defaultState(id);
     return {
       id,
       status,
@@ -241,7 +241,8 @@ export const onRequestGet: PagesFunction = async (ctx) => {
             <option value="denied" ${statusFilter === "denied" ? "selected" : ""}>denied</option>
             <option value="queued" ${statusFilter === "queued" ? "selected" : ""}>queued</option>
             <option value="completed" ${statusFilter === "completed" ? "selected" : ""}>completed</option>
-          </select>
+          <option value="archived" ${statusFilter === "archived" ? "selected" : ""}>archived</option>
+            </select>
         </label>
         <button type="submit">Filter</button>
       </form>

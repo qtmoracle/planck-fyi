@@ -12,8 +12,8 @@ const ENDPOINTS = {
 
 const DRAFT_KEY = "planck_intake_draft_v0_01";
 
-// Phase 0: stable machine ids (backward compatible; keep tier label too)
-const TIER_ID_BY_LABEL = {
+// Server-only tier map (NEVER referenced directly by client script)
+const TIER_MAP_SERVER = {
   "Maintenance Protocol": "maintenance",
   "Correction Protocol": "correction",
   "Full Surface Reset": "reset",
@@ -23,7 +23,7 @@ const TIER_ID_BY_LABEL = {
 
 <section id="request" class="scroll-mt-24">
   <div class="rounded-2xl border border-border bg-surface p-4 sm:p-6 md:p-10">
-    <div class="max-w-[72ch]">
+    <div class="max-w-[76ch]">
       <h2 class="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
         Request a Private Appointment
       </h2>
@@ -35,23 +35,21 @@ const TIER_ID_BY_LABEL = {
 
       <div class="mt-6 rounded-xl border border-border bg-bg/40 p-4">
         <p class="text-sm text-muted leading-relaxed">
-          <span class="text-text font-medium">Draft policy:</span>
+          <span class="text-text font-medium">Important:</span>
           this form saves a private draft on your device. <span class="text-text font-medium">Nothing is submitted</span>
           until required photos are attached and you select <span class="text-text font-medium">Submit for Review</span>.
         </p>
 
         <p class="mt-3 text-sm text-muted leading-relaxed">
-          <span class="text-text font-medium">Standards:</span>
-          clean access to the asset, safe parking, and sufficient working space.
-          Execution is scheduled to protect quality. Partial requests (interior or exterior only)
-          are billed at base protocol rates. Weather-contingent interior work may be credited
-          toward a future full protocol when applicable.
+          <span class="text-text font-medium">Minimum photos for review:</span>
+          {PHOTO_POLICY.requiredExterior} exterior + {PHOTO_POLICY.requiredInterior} interior
+          ({PHOTO_POLICY.requiredMin} total). More may be requested before approval.
         </p>
 
         <p class="mt-3 text-sm text-muted leading-relaxed">
-          <span class="text-text font-medium">Photo minimum for review:</span>
-          {PHOTO_POLICY.requiredExterior} exterior + {PHOTO_POLICY.requiredInterior} interior
-          ({PHOTO_POLICY.requiredMin} total). More may be requested before approval.
+          <span class="text-text font-medium">Approval gate:</span>
+          Submitting is a request, not a guarantee of service. I reserve the right to decline based on
+          scope, condition, timing, or location.
         </p>
       </div>
     </div>
@@ -65,8 +63,8 @@ const TIER_ID_BY_LABEL = {
       data-required-exterior={String(PHOTO_POLICY.requiredExterior)}
       data-required-interior={String(PHOTO_POLICY.requiredInterior)}
       data-required-min={String(PHOTO_POLICY.requiredMin)}
+      data-tier-map={JSON.stringify(TIER_MAP_SERVER)}
     >
-      <!-- Hidden stable ID (stored in draft) -->
       <input type="hidden" name="intake_id" />
 
       <!-- Contact -->
@@ -87,12 +85,13 @@ const TIER_ID_BY_LABEL = {
           <select
             required
             name="contact_method"
+            id="contact_method"
             class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
           >
             <option value="">Select…</option>
-            <option>Email</option>
-            <option>Text</option>
-            <option>Call</option>
+            <option value="Email">Email</option>
+            <option value="Text">Text</option>
+            <option value="Call">Call</option>
           </select>
         </label>
       </div>
@@ -111,13 +110,14 @@ const TIER_ID_BY_LABEL = {
         </label>
 
         <label class="grid gap-2">
-          <span class="text-sm text-muted">Phone (if text/call)</span>
+          <span class="text-sm text-muted">Phone (required for text/call)</span>
           <input
+            id="phone"
             name="phone"
             inputmode="tel"
             autocomplete="tel"
             class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
-            placeholder="(optional)"
+            placeholder="(optional if email)"
           />
         </label>
       </div>
@@ -205,7 +205,7 @@ const TIER_ID_BY_LABEL = {
           name="condition_notes"
           rows="5"
           class="w-full rounded-xl border border-border bg-bg p-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
-          placeholder="Paint condition, interior condition, pet hair, stains, odor, tree sap, tar, heavy brake dust, etc."
+          placeholder="Paint/interior condition, pet hair, stains, odor, sap, tar, heavy brake dust, etc."
         ></textarea>
       </label>
 
@@ -215,7 +215,7 @@ const TIER_ID_BY_LABEL = {
           name="access_notes"
           rows="3"
           class="w-full rounded-xl border border-border bg-bg p-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
-          placeholder="Parking, gate/code, water access (if any), shade/garage, etc."
+          placeholder="Parking, gate/code, shade/garage, water access (if any), etc."
         ></textarea>
       </label>
 
@@ -225,18 +225,19 @@ const TIER_ID_BY_LABEL = {
           <div>
             <p class="text-sm text-text font-medium">Photos (required for review)</p>
             <p class="mt-1 text-sm text-muted">
-              Minimum: <span class="text-text font-medium">2 exterior</span> + <span class="text-text font-medium">2 interior</span>.
+              Minimum: <span class="text-text font-medium">{PHOTO_POLICY.requiredExterior} exterior</span> +
+              <span class="text-text font-medium">{PHOTO_POLICY.requiredInterior} interior</span>.
             </p>
           </div>
 
           <div class="text-xs text-muted">
-            Draft saved locally · uploads are stored for review
+            Draft saved locally · uploads stored for review
           </div>
         </div>
 
         <div class="mt-5 grid gap-4 md:grid-cols-2">
           <label class="grid gap-2">
-            <span class="text-sm text-muted">Exterior photos (min 2)</span>
+            <span class="text-sm text-muted">Exterior photos (min {PHOTO_POLICY.requiredExterior})</span>
             <input
               id="photos-exterior"
               type="file"
@@ -247,7 +248,7 @@ const TIER_ID_BY_LABEL = {
           </label>
 
           <label class="grid gap-2">
-            <span class="text-sm text-muted">Interior photos (min 2)</span>
+            <span class="text-sm text-muted">Interior photos (min {PHOTO_POLICY.requiredInterior})</span>
             <input
               id="photos-interior"
               type="file"
@@ -261,24 +262,20 @@ const TIER_ID_BY_LABEL = {
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           <div class="rounded-xl border border-border bg-bg p-3">
             <p class="text-xs uppercase tracking-wider text-muted">Exterior status</p>
-            <p class="mt-2 text-sm text-text">
-              <span id="count-exterior">0</span> uploaded
-            </p>
+            <p class="mt-2 text-sm text-text"><span id="count-exterior">0</span> uploaded</p>
             <p class="mt-1 text-xs text-muted" id="status-exterior">Awaiting uploads</p>
           </div>
 
           <div class="rounded-xl border border-border bg-bg p-3">
             <p class="text-xs uppercase tracking-wider text-muted">Interior status</p>
-            <p class="mt-2 text-sm text-text">
-              <span id="count-interior">0</span> uploaded
-            </p>
+            <p class="mt-2 text-sm text-text"><span id="count-interior">0</span> uploaded</p>
             <p class="mt-1 text-xs text-muted" id="status-interior">Awaiting uploads</p>
           </div>
         </div>
 
         <div class="mt-4">
           <p class="text-xs text-muted">
-            If your upload fails, refresh and try again. Draft fields remain saved on your device.
+            If an upload fails, refresh and try again. Draft fields remain saved on your device.
           </p>
         </div>
       </div>
@@ -286,7 +283,8 @@ const TIER_ID_BY_LABEL = {
       <!-- Submit controls -->
       <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div class="text-sm text-muted">
-          <span class="text-text font-medium">Not submitted</span> until photo minimum is met and you select <span class="text-text font-medium">Submit for Review</span>.
+          <span class="text-text font-medium">Not submitted</span> until photo minimum is met and you select
+          <span class="text-text font-medium">Submit for Review</span>.
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -315,24 +313,33 @@ const TIER_ID_BY_LABEL = {
 
       <div
         id="form-message"
-        class="hidden rounded-xl border border-border bg-bg/40 p-4 text-sm text-text"
+        class="hidden rounded-xl border border-border bg-bg/40 p-4 text-sm text-text whitespace-pre-line"
         role="status"
         aria-live="polite"
       ></div>
     </form>
   </div>
 
-  <script>
+  <script is:inline>
     (function () {
       const form = document.getElementById("planck-intake");
       if (!form) return;
 
-      const draftKey = form.dataset.draftKey || "planck_intake_draft_v0_01";
-      const uploadUrlEndpoint = form.dataset.uploadUrl || "/api/upload-url";
-      const submitEndpoint = form.dataset.submitUrl || "/api/submit";
+      // Parse tier map from data attribute (no lexical TDZ risk)
+      let tierMap = {};
+      try {
+        tierMap = JSON.parse(form.dataset.tierMap || "{}");
+      } catch (e) {
+        tierMap = {};
+      }
 
       const requiredExterior = Number(form.dataset.requiredExterior || "2");
       const requiredInterior = Number(form.dataset.requiredInterior || "2");
+      const requiredMin = Number(form.dataset.requiredMin || "4");
+
+      const draftKey = form.dataset.draftKey || "planck_intake_draft_v0_01";
+      const uploadUrlEndpoint = form.dataset.uploadUrl || "/api/upload-url";
+      const submitEndpoint = form.dataset.submitUrl || "/api/submit";
 
       const fileExt = document.getElementById("photos-exterior");
       const fileInt = document.getElementById("photos-interior");
@@ -345,6 +352,9 @@ const TIER_ID_BY_LABEL = {
       const submitBtn = document.getElementById("submit-review");
       const clearBtn = document.getElementById("clear-draft");
       const msgBox = document.getElementById("form-message");
+
+      const contactMethodEl = document.getElementById("contact_method");
+      const phoneEl = document.getElementById("phone");
 
       function showMsg(text) {
         if (!msgBox) return;
@@ -411,7 +421,6 @@ const TIER_ID_BY_LABEL = {
         d.fields = d.fields || {};
         d.fields.intake_id = d.id;
 
-        // Write hidden input
         const idInput = form.elements["intake_id"];
         if (idInput) idInput.value = d.id;
 
@@ -422,18 +431,32 @@ const TIER_ID_BY_LABEL = {
       function photoCounts(items) {
         const ext = items.filter((x) => x && x.category === "exterior").length;
         const intr = items.filter((x) => x && x.category === "interior").length;
-        return { ext, intr };
+        return { ext, intr, total: ext + intr };
+      }
+
+      function enforcePhoneRequirement() {
+        if (!contactMethodEl || !phoneEl) return;
+        const method = String(contactMethodEl.value || "");
+        phoneEl.required = (method === "Text" || method === "Call");
       }
 
       function setCountsUI(items) {
         const c = photoCounts(items);
+
         if (countExtEl) countExtEl.textContent = String(c.ext);
         if (countIntEl) countIntEl.textContent = String(c.intr);
 
         if (statusExtEl) statusExtEl.textContent = c.ext >= requiredExterior ? "Minimum met" : "Awaiting uploads";
         if (statusIntEl) statusIntEl.textContent = c.intr >= requiredInterior ? "Minimum met" : "Awaiting uploads";
 
-        const ready = c.ext >= requiredExterior && c.intr >= requiredInterior && form.checkValidity();
+        enforcePhoneRequirement();
+
+        const ready =
+          c.ext >= requiredExterior &&
+          c.intr >= requiredInterior &&
+          c.total >= requiredMin &&
+          form.checkValidity();
+
         if (submitBtn) {
           submitBtn.disabled = !ready;
           submitBtn.classList.toggle("opacity-60", !ready);
@@ -471,13 +494,13 @@ const TIER_ID_BY_LABEL = {
         if (!res.ok) throw new Error("upload_failed");
       }
 
-      async function handleFiles(category, fileList) {
+      async function handleFiles(category, filesArray) {
         hideMsg();
         const intakeId = ensureIntakeId();
         const d = getDraft() || {};
         d.photos = d.photos || { items: [] };
 
-        const files = Array.from(fileList || []);
+        const files = Array.isArray(filesArray) ? filesArray : Array.from(filesArray || []);
         if (!files.length) return;
 
         const statusEl = category === "exterior" ? statusExtEl : statusIntEl;
@@ -520,10 +543,7 @@ const TIER_ID_BY_LABEL = {
           kind: "planck.intake",
           id: id,
           ts: new Date().toISOString(),
-          source: {
-            surface: "planck.fyi",
-            channel: "web"
-          },
+          source: { surface: "planck.fyi", channel: "web" },
           data: {
             contact: {
               name: fields.name || "",
@@ -537,7 +557,7 @@ const TIER_ID_BY_LABEL = {
             },
             request: {
               tier: fields.tier || "",
-              tier_id: TIER_ID_BY_LABEL[fields.tier] || "",
+              tier_id: (tierMap[fields.tier] || ""),
               service_area: fields.service_area || "",
               preferred_days: fields.preferred_days || "",
               preferred_window: fields.preferred_window || ""
@@ -553,8 +573,8 @@ const TIER_ID_BY_LABEL = {
             }
           },
           photos: {
-            required_min: 4,
-            required_categories: { exterior: 2, interior: 2 },
+            required_min: requiredMin,
+            required_categories: { exterior: requiredExterior, interior: requiredInterior },
             counts: { exterior: c.ext, interior: c.intr },
             items: items
           }
@@ -563,8 +583,8 @@ const TIER_ID_BY_LABEL = {
 
       async function submitForReview() {
         hideMsg();
+        enforcePhoneRequirement();
 
-        // Ensure validity + photo minimum
         if (!form.checkValidity()) {
           form.reportValidity();
           setCountsUI(((getDraft() || {}).photos || {}).items || []);
@@ -575,8 +595,8 @@ const TIER_ID_BY_LABEL = {
         const items = (d.photos && d.photos.items) ? d.photos.items : [];
         const c = photoCounts(items);
 
-        if (c.ext < requiredExterior || c.intr < requiredInterior) {
-          showMsg("Not submitted. Minimum: 2 exterior + 2 interior photos.");
+        if (c.ext < requiredExterior || c.intr < requiredInterior || c.total < requiredMin) {
+          showMsg(`Not submitted. Minimum: ${requiredExterior} exterior + ${requiredInterior} interior (${requiredMin} total).`);
           setCountsUI(items);
           return;
         }
@@ -608,8 +628,14 @@ const TIER_ID_BY_LABEL = {
           return;
         }
 
-        showMsg("Request received. Review pending.");
-        // Clear draft after successful submit
+        showMsg(
+          "Request received. Review pending.\n\n" +
+          "Next steps:\n" +
+          "1) I review photos + scope\n" +
+          "2) If approved, you receive a confirmed time window + prep notes\n" +
+          "3) If not approved, you’ll receive a short reason + recommendation"
+        );
+
         try { localStorage.removeItem(draftKey); } catch (e) {}
 
         if (submitBtn) {
@@ -619,7 +645,6 @@ const TIER_ID_BY_LABEL = {
         }
       }
 
-      // Init: load draft, ensure id, counts
       (function init() {
         const d = getDraft();
         if (d && d.fields) applyFields(d.fields);
@@ -629,7 +654,6 @@ const TIER_ID_BY_LABEL = {
         const items = (d && d.photos && d.photos.items) ? d.photos.items : [];
         setCountsUI(items);
 
-        // Auto-save draft on any input change
         form.addEventListener("input", function () {
           saveDraftFromForm();
           const dd = getDraft() || {};
@@ -644,19 +668,30 @@ const TIER_ID_BY_LABEL = {
           setCountsUI(it);
         });
 
+        if (contactMethodEl) {
+          contactMethodEl.addEventListener("change", function () {
+            enforcePhoneRequirement();
+            const dd = getDraft() || {};
+            const it = (dd.photos && dd.photos.items) ? dd.photos.items : [];
+            setCountsUI(it);
+          });
+        }
+
         if (fileExt) {
           fileExt.addEventListener("change", function (e) {
-            const files = e && e.target ? e.target.files : null;
-            if (files) handleFiles("exterior", files);
-            fileExt.value = "";
+            const input = e && e.target ? e.target : null;
+            const files = input && input.files ? Array.from(input.files) : [];
+            if (files.length) handleFiles("exterior", files);
+            if (input) input.value = "";
           });
         }
 
         if (fileInt) {
           fileInt.addEventListener("change", function (e) {
-            const files = e && e.target ? e.target.files : null;
-            if (files) handleFiles("interior", files);
-            fileInt.value = "";
+            const input = e && e.target ? e.target : null;
+            const files = input && input.files ? Array.from(input.files) : [];
+            if (files.length) handleFiles("interior", files);
+            if (input) input.value = "";
           });
         }
 

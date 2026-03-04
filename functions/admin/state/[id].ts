@@ -1,3 +1,4 @@
+// functions/admin/state/[id].ts
 function unauthorized() {
   return new Response("Unauthorized", {
     status: 401,
@@ -10,7 +11,11 @@ function checkAuth(req: Request, user: string, pass: string) {
   if (!h.startsWith("Basic ")) return false;
   const raw = h.slice(6).trim();
   let decoded = "";
-  try { decoded = atob(raw); } catch { return false; }
+  try {
+    decoded = atob(raw);
+  } catch {
+    return false;
+  }
   const idx = decoded.indexOf(":");
   if (idx < 0) return false;
   const u = decoded.slice(0, idx);
@@ -18,7 +23,7 @@ function checkAuth(req: Request, user: string, pass: string) {
   return u === user && p === pass;
 }
 
-type IntakeStateStatus = "pending" | "approved" | "denied" | "queued" | "completed";
+type IntakeStateStatus = "pending" | "approved" | "denied" | "queued" | "completed" | "archived";
 type IntakeState = {
   id: string;
   status: IntakeStateStatus;
@@ -28,7 +33,16 @@ type IntakeState = {
   queue?: { position: number | null; scheduledFor: string | null };
 };
 
-const STATE_PREFIX  = "planck/intake_state/INTAKE_STATE_v0.01/";
+const STATE_PREFIX = "planck/intake_state/INTAKE_STATE_v0.01/";
+
+const ALLOWED_STATUSES = new Set<IntakeStateStatus>([
+  "pending",
+  "approved",
+  "denied",
+  "queued",
+  "completed",
+  "archived",
+]);
 
 function defaultState(id: string): IntakeState {
   return {
@@ -45,11 +59,14 @@ async function readState(bucket: R2Bucket, id: string): Promise<IntakeState> {
   const key = `${STATE_PREFIX}${id}.json`;
   const obj = await bucket.get(key);
   if (!obj) return defaultState(id);
+
   try {
     const txt = await obj.text();
     const s = JSON.parse(txt);
+
     const status = String(s.status || "pending") as IntakeStateStatus;
-    if (!["pending","approved","denied","queued","completed"].includes(status)) return defaultState(id);
+    if (!ALLOWED_STATUSES.has(status)) return defaultState(id);
+
     return {
       id,
       status,
@@ -57,8 +74,8 @@ async function readState(bucket: R2Bucket, id: string): Promise<IntakeState> {
       updatedBy: String(s.updatedBy || "admin"),
       notes: typeof s.notes === "string" ? s.notes : "",
       queue: {
-        position: (s.queue && typeof s.queue.position === "number") ? s.queue.position : null,
-        scheduledFor: (s.queue && typeof s.queue.scheduledFor === "string") ? s.queue.scheduledFor : null,
+        position: s.queue && typeof s.queue.position === "number" ? s.queue.position : null,
+        scheduledFor: s.queue && typeof s.queue.scheduledFor === "string" ? s.queue.scheduledFor : null,
       },
     };
   } catch {
@@ -91,7 +108,7 @@ export const onRequestPost: PagesFunction = async (ctx) => {
   if (!ADMIN_USER || !ADMIN_PASS) return unauthorized();
   if (!checkAuth(request, ADMIN_USER, ADMIN_PASS)) return unauthorized();
 
-  const id = String(params?.id || "").trim();
+  const id = String(params?.id || "").trim().replace(/\.json$/i, "");
   if (!id) return new Response("Missing id", { status: 400 });
 
   // @ts-ignore
@@ -112,6 +129,8 @@ export const onRequestPost: PagesFunction = async (ctx) => {
   else if (action === "deny") nextStatus = "denied";
   else if (action === "queue") nextStatus = "queued";
   else if (action === "complete") nextStatus = "completed";
+  else if (action === "archive") nextStatus = "archived";
+  else if (action === "unarchive") nextStatus = "pending";
   else return new Response("Invalid action", { status: 400 });
 
   const next: IntakeState = {
@@ -121,13 +140,13 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     updatedBy: ADMIN_USER || "admin",
     notes,
     queue: {
-      position: (nextStatus === "queued" || nextStatus === "approved") ? queuePos : null,
-      scheduledFor: (nextStatus === "queued" || nextStatus === "approved") ? scheduledFor : null,
+      position: nextStatus === "queued" || nextStatus === "approved" ? queuePos : null,
+      scheduledFor: nextStatus === "queued" || nextStatus === "approved" ? scheduledFor : null,
     },
   };
 
-  // If denied/completed, clear queue fields
-  if (nextStatus === "denied" || nextStatus === "completed") {
+  // Terminal-ish states should not keep queue fields
+  if (nextStatus === "denied" || nextStatus === "completed" || nextStatus === "archived") {
     next.queue = { position: null, scheduledFor: null };
   }
 

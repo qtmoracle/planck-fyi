@@ -47,6 +47,7 @@ function page(title: string, body: string) {
     .pill.denied{background:#fef2f2}
     .pill.queued{background:#f5f3ff}
     .pill.completed{background:#f0fdf4}
+    .pill.archived{background:#fffbeb}
     .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     form{margin:0}
     button{font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#111827;color:#fff;border-color:#111827;cursor:pointer}
@@ -70,7 +71,7 @@ function page(title: string, body: string) {
 </html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }});
 }
 
-type IntakeStateStatus = "pending" | "approved" | "denied" | "queued" | "completed";
+type IntakeStateStatus = "pending" | "approved" | "denied" | "queued" | "completed" | "archived";
 type IntakeState = {
   id: string;
   status: IntakeStateStatus;
@@ -102,7 +103,7 @@ async function readState(bucket: R2Bucket, id: string): Promise<IntakeState> {
     const txt = await obj.text();
     const s = JSON.parse(txt);
     const status = String(s.status || "pending") as IntakeStateStatus;
-    if (!["pending","approved","denied","queued","completed"].includes(status)) return defaultState(id);
+    if (!["pending","approved","denied","queued","completed","archived"].includes(status)) return defaultState(id);
     return {
       id,
       status,
@@ -196,6 +197,8 @@ export const onRequestGet: PagesFunction = async (ctx) => {
           <button name="action" value="deny" class="danger">Deny</button>
           <button name="action" value="queue" class="purple">Queue</button>
           <button name="action" value="complete" class="green">Complete</button>
+          <button name="action" value="archive" class="secondary">Archive</button>
+          <button name="action" value="unarchive" class="secondary">Unarchive</button>
         </div>
 
         <div class="meta" style="margin-top:10px">
