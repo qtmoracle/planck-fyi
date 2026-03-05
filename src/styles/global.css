@@ -10,7 +10,10 @@
   --bg: #f4f6f8;
   --surface: #ffffff;
   --text: #0e0e10;
-  --muted: #6b7280;
+
+  /* Slightly darker for readability */
+  --muted: #4b5563;
+
   --border: #e5e7eb;
 
   /* Accent */
@@ -26,7 +29,9 @@ html.dark {
   --bg: #0b1118;
   --surface: #111a24;
   --text: #f4f6f8;
+
   --muted: #9ca3af;
+
   --border: #223042;
 
   --accent: #2da8ff;
@@ -50,9 +55,12 @@ html.dark {
   --color-accent-soft: var(--accent-soft);
 }
 
-/* Keep your original base sizing */
+/* =========================================================
+   Typography baseline
+   ========================================================= */
+
 html {
-  font-size: 18px;
+  font-size: 22px;
 }
 
 html,
@@ -64,6 +72,9 @@ body {
   background: var(--bg);
   color: var(--text);
   text-rendering: optimizeLegibility;
+
+  /* Improves readability across the entire site */
+  line-height: 1.6;
 }
 
 /* Selection */

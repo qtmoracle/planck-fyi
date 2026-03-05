@@ -12,6 +12,7 @@ const { title = "Planck Surface Engineers" } = Astro.props;
   </head>
 
   <body class="min-h-screen bg-bg text-text antialiased selection:bg-accent/20 selection:text-text">
+
     <!-- subtle background depth -->
     <div class="pointer-events-none fixed inset-0 -z-10">
       <div class="absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(255,255,255,0.06),transparent_55%)]"></div>
@@ -19,11 +20,13 @@ const { title = "Planck Surface Engineers" } = Astro.props;
       <div class="absolute inset-0 bg-[radial-gradient(50%_40%_at_80%_10%,rgba(255,255,255,0.03),transparent_60%)]"></div>
     </div>
 
-    <header class="sticky top-0 z-50 border-b border-border/70 bg-bg/75 backdrop-blur supports-[backdrop-filter]:bg-bg/55">
+    <header class="sticky top-0 z-50 border-b border-border/70 bg-bg/75 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_70%)] backdrop-blur supports-[backdrop-filter]:bg-bg/55">
       <div class="mx-auto max-w-content px-6">
-        <!-- Row 1: lock height so header never "shifts" -->
+
+        <!-- Row 1 -->
         <div class="flex items-center justify-between py-3 min-h-[72px]">
-          <!-- Brand (prevent shrink + keep stable sizing) -->
+
+          <!-- Brand -->
           <a href="/" class="group flex items-center gap-3 shrink-0">
             <img
               src="/brand/planck-wordmark.png"
@@ -32,16 +35,23 @@ const { title = "Planck Surface Engineers" } = Astro.props;
               loading="eager"
               decoding="async"
             />
+
             <div class="hidden sm:block leading-tight">
-              <div class="text-sm font-semibold tracking-wide">Surface Engineers</div>
-              <div class="text-xs text-muted tracking-wide">Protocol detailing · asset preservation</div>
+              <div class="text-sm font-semibold tracking-wide">
+                Surface Engineers
+              </div>
+
+              <div class="text-xs text-muted tracking-wide">
+                Protocol detailing · asset preservation
+              </div>
             </div>
           </a>
 
-          <!-- Right rail (prevent reflow) -->
+          <!-- Right rail -->
           <div class="flex items-center gap-3 shrink-0">
-            <div class="hidden lg:block text-xs text-muted whitespace-nowrap">
-              Miami · Appointment only
+
+            <div class="hidden lg:block text-xs text-text/70 whitespace-nowrap">
+              Miami Dade County · Appointment only
             </div>
 
             <a
@@ -54,31 +64,41 @@ const { title = "Planck Surface Engineers" } = Astro.props;
               Request Appointment
               <span class="text-muted">→</span>
             </a>
+
           </div>
         </div>
 
-        <!-- Row 2: trust strip (stability guards) -->
+        <!-- Row 2: trust strip -->
         <div class="hidden sm:flex items-center justify-between pb-3 gap-6">
-          <!-- Don’t let this wrap into 2 lines and change header height -->
+
           <div class="flex items-center gap-x-5 text-xs text-muted min-w-0 overflow-hidden">
+
             <span class="inline-flex items-center gap-2 whitespace-nowrap">
-              <span class="h-1.5 w-1.5 rounded-full bg-accent/70"></span>
+              <span class="h-1.5 w-1.5 rounded-full bg-accent/50"></span>
               Fixed protocol pricing
             </span>
+
             <span class="inline-flex items-center gap-2 whitespace-nowrap">
-              <span class="h-1.5 w-1.5 rounded-full bg-accent/70"></span>
+              <span class="h-1.5 w-1.5 rounded-full bg-accent/50"></span>
               Condition-assessed approvals
             </span>
+
             <span class="inline-flex items-center gap-2 whitespace-nowrap">
-              <span class="h-1.5 w-1.5 rounded-full bg-accent/70"></span>
+              <span class="h-1.5 w-1.5 rounded-full bg-accent/50"></span>
               No rush / no scope negotiation
             </span>
+
           </div>
 
-          <a href="#services" class="text-xs text-muted hover:text-text transition-colors whitespace-nowrap">
+          <a
+            href="#services"
+            class="text-xs text-muted hover:text-text transition-colors whitespace-nowrap"
+          >
             View services
           </a>
+
         </div>
+
       </div>
     </header>
 
@@ -87,37 +107,52 @@ const { title = "Planck Surface Engineers" } = Astro.props;
     </main>
 
     <footer class="border-t border-border/70 bg-bg/40">
+
       <div class="mx-auto max-w-content px-6 py-12">
+
         <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
+
           <div class="lg:col-span-7">
-            <div class="text-sm font-semibold tracking-wide">Planck Surface Engineers</div>
+
+            <div class="text-sm font-semibold tracking-wide">
+              Planck Surface Engineers
+            </div>
+
             <div class="mt-2 text-sm text-muted leading-relaxed">
-              Pinecrest · Coral Gables · South Miami · Kendall · Brickell · South Beach · Aventura · Doral · Palmetto Bay · Old Cutler
+              Pinecrest · Coral Gables · South Miami · Kendall
+            </div>
+
+            <div class="mt-2 text-xs text-muted leading-relaxed">
+              Serving: Brickell · Wynwood · South Beach · Aventura · Doral · Palmetto Bay · Old Cutler
             </div>
 
             <div class="mt-6 flex flex-wrap gap-2">
+
               <a
                 href="#request"
-                class="inline-flex items-center rounded-xl border border-border/80 px-4 py-2 text-sm
-                       hover:border-accent/70 transition-colors"
+                class="inline-flex items-center rounded-xl border border-border/80 px-4 py-2 text-sm hover:border-accent/70 transition-colors"
               >
                 Request Appointment
               </a>
+
               <a
                 href="/"
-                class="inline-flex items-center rounded-xl border border-border/80 px-4 py-2 text-sm
-                       hover:border-accent/70 transition-colors"
+                class="inline-flex items-center rounded-xl border border-border/80 px-4 py-2 text-sm hover:border-accent/70 transition-colors"
               >
                 Home
               </a>
+
             </div>
           </div>
 
           <div class="lg:col-span-5">
+
             <div class="rounded-2xl border border-border/70 bg-bg p-5 shadow-sm shadow-black/5">
+
               <div class="text-xs font-semibold tracking-wide text-text">
                 Operating policy
               </div>
+
               <div class="mt-2 text-sm text-muted leading-relaxed">
                 Appointment approval is subject to condition assessment and schedule alignment.
                 Fixed protocol pricing. Scope is not negotiated.
@@ -126,11 +161,14 @@ const { title = "Planck Surface Engineers" } = Astro.props;
               <div class="mt-4 text-xs text-muted">
                 Documentation-first, repeatable execution.
               </div>
+
             </div>
+
           </div>
         </div>
 
         <div class="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 pt-6">
+
           <div class="text-xs text-muted">
             © {new Date().getFullYear()} Planck. All rights reserved.
           </div>
@@ -138,22 +176,15 @@ const { title = "Planck Surface Engineers" } = Astro.props;
           <div class="text-xs text-muted">
             Built for calm authority · designed for field reality
           </div>
+
         </div>
+
       </div>
+
     </footer>
 
-    <!-- Alpine init (explicit) -->
-    <script type="module">
-      import Alpine from "alpinejs";
+    <!-- Alpine (bundled through Vite) -->
+    <script type="module" src="/src/scripts/alpine.ts"></script>
 
-      // expose for debugging
-      window.Alpine = Alpine;
-
-      // start once
-      if (!window.__ALPINE_STARTED__) {
-        Alpine.start();
-        window.__ALPINE_STARTED__ = true;
-      }
-    </script>
   </body>
 </html>

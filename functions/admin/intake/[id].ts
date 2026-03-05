@@ -61,7 +61,7 @@ function page(title: string, body: string) {
     .card{border:1px solid #e5e7eb;border-radius:14px;padding:14px;margin:14px 0}
     .kv{display:grid;grid-template-columns:160px 1fr;gap:8px 14px;font-size:14px}
     .k{color:#6b7280}
-    input[type="date"],input[type="time"]{font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px}
+    input[type="date"],input[type="time"],input[type="number"],input[type="datetime-local"]{font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px}
     .help{font-size:12px;color:#6b7280;margin-top:8px}
   </style>
 </head>
@@ -78,7 +78,11 @@ type IntakeState = {
   updatedAt: string;
   updatedBy: string;
   notes?: string;
-  queue?: { position: number | null; scheduledFor: string | null };
+  queue?: {
+    position: number | null;
+    scheduledFor: string | null; // canonical UTC ISO string (Z)
+    // scheduledByTz?: string | null; // optional; saved by /admin/state handler if you add it
+  };
 };
 
 const PACKET_PREFIX = "planck/intake_packets/INTAKE_PACKET_v0.01/";
@@ -156,6 +160,9 @@ export const onRequestGet: PagesFunction = async (ctx) => {
   const asset = packet?.data?.asset || {};
   const requestData = packet?.data?.request || {};
 
+  // canonical UTC ISO string, if present
+  const scheduledUtc = st.queue?.scheduledFor ? String(st.queue.scheduledFor) : "";
+
   const body = `
     <div class="row">
       <div>
@@ -174,21 +181,34 @@ export const onRequestGet: PagesFunction = async (ctx) => {
         <div class="meta">Sidecar only — packet is immutable</div>
       </div>
 
-      <form method="POST" action="/admin/state/${encodeURIComponent(id)}">
+      <form id="adminStateForm" method="POST" action="/admin/state/${encodeURIComponent(id)}">
         <div class="kv" style="margin-top:12px">
           <div class="k">Notes</div>
           <div><textarea name="notes" placeholder="Internal notes (optional)">${esc(st.notes || "")}</textarea></div>
 
           <div class="k">Queue Position</div>
           <div>
-            <input name="queue_position" type="number" min="1" step="1" value="${st.queue?.position ?? ""}" style="font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;width:160px" />
+            <input name="queue_position" type="number" min="1" step="1" value="${st.queue?.position ?? ""}" style="width:160px" />
             <span class="meta">optional</span>
           </div>
 
           <div class="k">Scheduled For</div>
           <div>
-            <input name="scheduled_for" type="datetime-local" value="${st.queue?.scheduledFor ? esc(st.queue.scheduledFor.slice(0,16)) : ""}" style="font-size:14px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px" />
-            <span class="meta">optional</span>
+            <!-- Visible input is LOCAL to the viewer/operator -->
+            <input
+              id="scheduled_for_local"
+              name="scheduled_for_local"
+              type="datetime-local"
+              value=""
+              data-utc="${esc(scheduledUtc)}"
+              style="width:260px"
+            />
+            <!-- Hidden canonical UTC value written on submit -->
+            <input id="scheduled_for_utc" name="scheduled_for" type="hidden" value="${esc(scheduledUtc)}" />
+            <!-- Optional: capture who scheduled it (timezone label) -->
+            <input id="scheduled_by_tz" name="scheduled_by_tz" type="hidden" value="" />
+            <span class="meta">optional · displayed in your local time</span>
+            <div class="help">Stored as UTC (canonical). Rendered in the viewer’s timezone.</div>
           </div>
         </div>
 
@@ -260,6 +280,54 @@ export const onRequestGet: PagesFunction = async (ctx) => {
 
     <h2>Full Submission Data</h2>
     <pre>${esc(pretty)}</pre>
+
+    <script>
+      (function(){
+        const localEl = document.getElementById("scheduled_for_local");
+        const utcEl = document.getElementById("scheduled_for_utc");
+        const tzEl = document.getElementById("scheduled_by_tz");
+        const form = document.getElementById("adminStateForm");
+        if (!localEl || !utcEl || !form) return;
+
+        // Convert UTC ISO -> datetime-local string (viewer local timezone)
+        function toLocalInputValue(utcIso){
+          const d = new Date(utcIso);
+          if (Number.isNaN(d.getTime())) return "";
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth()+1).padStart(2,"0");
+          const dd = String(d.getDate()).padStart(2,"0");
+          const hh = String(d.getHours()).padStart(2,"0");
+          const mi = String(d.getMinutes()).padStart(2,"0");
+          return yyyy + "-" + mm + "-" + dd + "T" + hh + ":" + mi;
+        }
+
+        // On load: if we have stored UTC, show it localized to this viewer
+        const storedUtc = localEl.getAttribute("data-utc") || "";
+        if (storedUtc) {
+          localEl.value = toLocalInputValue(storedUtc);
+          utcEl.value = storedUtc; // keep canonical
+        }
+
+        // On submit: convert viewer-local datetime-local -> canonical UTC ISO
+        form.addEventListener("submit", function(){
+          const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || "";
+          if (tzEl) tzEl.value = tz;
+
+          const v = localEl.value || "";
+          if (!v) {
+            utcEl.value = "";
+            return;
+          }
+          // v is interpreted as local time in the viewer's environment
+          const d = new Date(v);
+          if (Number.isNaN(d.getTime())) {
+            utcEl.value = "";
+            return;
+          }
+          utcEl.value = d.toISOString();
+        });
+      })();
+    </script>
   `;
 
   return page("Planck Admin", body);

@@ -30,7 +30,11 @@ type IntakeState = {
   updatedAt: string;
   updatedBy: string;
   notes?: string;
-  queue?: { position: number | null; scheduledFor: string | null };
+  queue?: {
+    position: number | null;
+    scheduledFor: string | null;      // canonical UTC ISO string
+    scheduledByTz?: string | null;    // optional: timezone of the operator who scheduled it
+  };
 };
 
 const STATE_PREFIX = "planck/intake_state/INTAKE_STATE_v0.01/";
@@ -51,7 +55,7 @@ function defaultState(id: string): IntakeState {
     updatedAt: new Date().toISOString(),
     updatedBy: "system",
     notes: "",
-    queue: { position: null, scheduledFor: null },
+    queue: { position: null, scheduledFor: null, scheduledByTz: null },
   };
 }
 
@@ -67,6 +71,12 @@ async function readState(bucket: R2Bucket, id: string): Promise<IntakeState> {
     const status = String(s.status || "pending") as IntakeStateStatus;
     if (!ALLOWED_STATUSES.has(status)) return defaultState(id);
 
+    const scheduledFor =
+      s.queue && typeof s.queue.scheduledFor === "string" ? s.queue.scheduledFor : null;
+
+    const scheduledByTz =
+      s.queue && typeof s.queue.scheduledByTz === "string" ? s.queue.scheduledByTz : null;
+
     return {
       id,
       status,
@@ -75,7 +85,8 @@ async function readState(bucket: R2Bucket, id: string): Promise<IntakeState> {
       notes: typeof s.notes === "string" ? s.notes : "",
       queue: {
         position: s.queue && typeof s.queue.position === "number" ? s.queue.position : null,
-        scheduledFor: s.queue && typeof s.queue.scheduledFor === "string" ? s.queue.scheduledFor : null,
+        scheduledFor,
+        scheduledByTz,
       },
     };
   } catch {
@@ -92,12 +103,26 @@ function toIntOrNull(v: unknown): number | null {
   return i > 0 ? i : null;
 }
 
-function toIsoOrNullFromDatetimeLocal(v: unknown): string | null {
+// NEW: scheduled_for is expected to already be an ISO string (UTC) coming from the browser
+function toIsoOrNullFromIso(v: unknown): string | null {
   const s = String(v ?? "").trim();
-  if (!s) return null; // expected "YYYY-MM-DDTHH:MM"
+  if (!s) return null;
+
+  // Accept either:
+  // - full ISO: 2026-03-08T17:00:00.000Z
+  // - or any parseable ISO-like string
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return null;
+
+  // Normalize to canonical UTC ISO
   return d.toISOString();
+}
+
+function toTzOrNull(v: unknown): string | null {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  // keep it simple; store as provided (e.g. "America/New_York")
+  return s.slice(0, 64);
 }
 
 export const onRequestPost: PagesFunction = async (ctx) => {
@@ -120,7 +145,12 @@ export const onRequestPost: PagesFunction = async (ctx) => {
   const action = String(form.get("action") || "").trim();
   const notes = String(form.get("notes") || "").trim();
   const queuePos = toIntOrNull(form.get("queue_position"));
-  const scheduledFor = toIsoOrNullFromDatetimeLocal(form.get("scheduled_for"));
+
+  // IMPORTANT: this is now UTC ISO from the hidden input (not datetime-local)
+  const scheduledFor = toIsoOrNullFromIso(form.get("scheduled_for"));
+
+  // Optional operator timezone capture (from browser)
+  const scheduledByTz = toTzOrNull(form.get("scheduled_by_tz"));
 
   const prev = await readState(bucket, id);
 
@@ -133,6 +163,8 @@ export const onRequestPost: PagesFunction = async (ctx) => {
   else if (action === "unarchive") nextStatus = "pending";
   else return new Response("Invalid action", { status: 400 });
 
+  const shouldKeepQueue = nextStatus === "queued" || nextStatus === "approved";
+
   const next: IntakeState = {
     id,
     status: nextStatus,
@@ -140,14 +172,15 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     updatedBy: ADMIN_USER || "admin",
     notes,
     queue: {
-      position: nextStatus === "queued" || nextStatus === "approved" ? queuePos : null,
-      scheduledFor: nextStatus === "queued" || nextStatus === "approved" ? scheduledFor : null,
+      position: shouldKeepQueue ? queuePos : null,
+      scheduledFor: shouldKeepQueue ? scheduledFor : null,
+      scheduledByTz: shouldKeepQueue ? scheduledByTz : null,
     },
   };
 
   // Terminal-ish states should not keep queue fields
   if (nextStatus === "denied" || nextStatus === "completed" || nextStatus === "archived") {
-    next.queue = { position: null, scheduledFor: null };
+    next.queue = { position: null, scheduledFor: null, scheduledByTz: null };
   }
 
   const key = `${STATE_PREFIX}${id}.json`;
@@ -155,7 +188,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     httpMetadata: { contentType: "application/json; charset=utf-8" },
   });
 
-  // back to the intake detail page
   return new Response(null, {
     status: 303,
     headers: { Location: `/admin/intake/${encodeURIComponent(id)}` },
