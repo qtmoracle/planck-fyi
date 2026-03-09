@@ -1,0 +1,96 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { surfaces, getSurfaceBySlug } from "../../data/surfaces";
+import { operators } from "../../data/operators";
+
+export function getStaticPaths() {
+  return surfaces.map((surface) => ({
+    params: { slug: surface.slug },
+  }));
+}
+
+const { slug } = Astro.params;
+
+const surface = getSurfaceBySlug(slug ?? "");
+
+if (!surface) {
+  throw new Error(`Surface not found: ${slug}`);
+}
+
+const surfaceOperators = operators.filter(
+  (operator) => operator.surface === surface.slug
+);
+---
+
+<BaseLayout title={`${surface.name} · Planck Network`}>
+
+  <main class="py-24">
+
+    <div class="mx-auto max-w-content px-6">
+
+      <header class="max-w-3xl">
+
+        <p class="text-xs tracking-wide text-text/70">
+          planck surface
+        </p>
+
+        <h1 class="mt-4 text-4xl sm:text-5xl font-semibold tracking-tightest leading-tight">
+          {surface.name}
+        </h1>
+
+        <p class="mt-6 text-muted leading-relaxed">
+          {surface.description}
+        </p>
+
+      </header>
+
+      <section class="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+
+        {surfaceOperators.map((operator) => (
+
+          <a
+            href={`/operators/${operator.slug}`}
+            class="block border border-border p-6 hover:border-accent transition-colors"
+          >
+
+            <div class="flex items-center gap-4">
+
+              <img
+                src={operator.logo}
+                alt={operator.name}
+                class="h-10 w-auto"
+              />
+
+              <div>
+
+                <p class="text-lg font-medium text-text">
+                  {operator.name}
+                </p>
+
+                <p class="text-sm text-text/70">
+                  {operator.regionName}
+                </p>
+
+              </div>
+
+            </div>
+
+            <p class="mt-4 text-sm text-muted">
+              {operator.tagline}
+            </p>
+
+            <p class="mt-6 text-sm text-accent">
+              view operator →
+            </p>
+
+          </a>
+
+        ))}
+
+      </section>
+
+    </div>
+
+  </main>
+
+</BaseLayout>

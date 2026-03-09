@@ -1,0 +1,81 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { operators } from "../../data/operators";
+---
+
+<BaseLayout title="Planck Network Operators">
+  <main class="py-24">
+    <div class="mx-auto max-w-content px-4 sm:px-6">
+
+      <header class="max-w-3xl">
+        <p class="text-xs tracking-wide text-text/70">
+          planck service router
+        </p>
+
+        <h1 class="mt-4 text-4xl sm:text-5xl font-semibold tracking-tightest leading-tight">
+          network operators
+        </h1>
+
+        <p class="mt-6 text-muted leading-relaxed">
+          independent operators delivering structured service protocols
+          through the planck routing infrastructure.
+        </p>
+
+        <p class="mt-4 text-sm text-text/60">
+          {operators.length} active operator{operators.length !== 1 ? "s" : ""}
+        </p>
+      </header>
+
+      <section class="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+
+        {operators.map((operator) => (
+          <a
+            href={`/operators/${operator.slug}`}
+            class="group block border border-border p-6 hover:border-accent transition-colors"
+          >
+
+            <div class="flex items-center gap-4">
+
+              <img
+                src={operator.logo}
+                alt={operator.name}
+                class="h-10 w-auto"
+                loading="lazy"
+              />
+
+              <div>
+                <p class="text-lg font-medium text-text">
+                  {operator.name}
+                </p>
+
+                <p class="text-sm text-text/70">
+                  {operator.region}
+                </p>
+              </div>
+
+            </div>
+
+            <p class="mt-4 text-sm text-muted leading-relaxed">
+              {operator.tagline}
+            </p>
+
+            <div class="mt-4 flex items-center justify-between">
+
+              <span class="text-xs uppercase tracking-wide text-text/60">
+                {operator.surface}
+              </span>
+
+              <span class="text-sm text-accent group-hover:translate-x-1 transition-transform">
+                view operator →
+              </span>
+
+            </div>
+
+          </a>
+        ))}
+
+      </section>
+
+    </div>
+  </main>
+</BaseLayout>
