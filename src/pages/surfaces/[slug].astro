@@ -20,77 +20,271 @@ if (!surface) {
 const surfaceOperators = operators.filter(
   (operator) => operator.surface === surface.slug
 );
+
+const surfaceImageMap: Record<string, string> = {
+  "auto-detailing": "/images/surfaces/auto-detailing.svg",
+  landscaping: "/images/surfaces/landscaping.svg",
+  "pressure-cleaning": "/images/surfaces/pressure-cleaning.svg",
+};
+
+const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.svg";
 ---
 
 <BaseLayout title={`${surface.name} · Planck Network`}>
-
   <main class="py-24">
+    <div class="mx-auto max-w-content px-4 sm:px-6">
+      <header class="grid gap-8 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
+        <div class="max-w-3xl">
+          <img
+            src={surfaceImage}
+            alt={surface.name}
+            class="mb-8 h-56 w-full rounded border border-border object-cover shadow-[0_0_60px_rgba(59,130,246,0.12)] md:h-72"
+            loading="eager"
+          />
 
-    <div class="mx-auto max-w-content px-6">
+          <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
+            planck surface
+          </p>
 
-      <header class="max-w-3xl">
+          <h1 class="mt-4 text-4xl sm:text-5xl font-semibold tracking-tightest leading-tight">
+            {surface.name}
+          </h1>
 
-        <p class="text-xs tracking-wide text-text/70">
-          planck surface
-        </p>
+          <p class="mt-6 max-w-2xl text-muted leading-relaxed">
+            {surface.description}
+          </p>
+        </div>
 
-        <h1 class="mt-4 text-4xl sm:text-5xl font-semibold tracking-tightest leading-tight">
-          {surface.name}
-        </h1>
+        <div class="relative overflow-hidden border border-border bg-bg/60 p-6">
+          <div class="pointer-events-none absolute inset-0">
+            <div class="absolute -right-8 top-0 h-32 w-32 rounded-full bg-accent/10 blur-3xl"></div>
+          </div>
 
-        <p class="mt-6 text-muted leading-relaxed">
-          {surface.description}
-        </p>
+          <div class="relative">
+            <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
+              active surface state
+            </p>
 
-      </header>
-
-      <section class="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-
-        {surfaceOperators.map((operator) => (
-
-          <a
-            href={`/operators/${operator.slug}`}
-            class="block border border-border p-6 hover:border-accent transition-colors"
-          >
-
-            <div class="flex items-center gap-4">
-
-              <img
-                src={operator.logo}
-                alt={operator.name}
-                class="h-10 w-auto"
-              />
-
-              <div>
-
-                <p class="text-lg font-medium text-text">
-                  {operator.name}
+            <div class="mt-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+              <div class="border border-border/70 bg-white/[0.02] p-4">
+                <p class="text-xs tracking-wide text-text/60 uppercase">
+                  surface
                 </p>
-
-                <p class="text-sm text-text/70">
-                  {operator.regionName}
+                <p class="mt-2 text-lg font-medium">
+                  {surface.name}
                 </p>
-
               </div>
 
+              <div class="border border-border/70 bg-white/[0.02] p-4">
+                <p class="text-xs tracking-wide text-text/60 uppercase">
+                  live operators
+                </p>
+                <p class="mt-2 text-lg font-medium">
+                  {surfaceOperators.length}
+                </p>
+              </div>
+
+              <div class="border border-border/70 bg-white/[0.02] p-4">
+                <p class="text-xs tracking-wide text-text/60 uppercase">
+                  model
+                </p>
+                <p class="mt-2 text-lg font-medium">
+                  independent execution
+                </p>
+              </div>
             </div>
+          </div>
+        </div>
+      </header>
 
-            <p class="mt-4 text-sm text-muted">
-              {operator.tagline}
-            </p>
+      <section class="mt-16">
+        <div class="max-w-3xl">
+          <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
+            active operators
+          </p>
 
-            <p class="mt-6 text-sm text-accent">
-              view operator →
-            </p>
+          <h2 class="mt-3 text-2xl font-semibold">
+            operators on this surface
+          </h2>
+        </div>
 
-          </a>
+        {surfaceOperators.length > 0 ? (
+          <div class="mt-8">
+            {surfaceOperators.length === 1 ? (
+              <div class="max-w-3xl">
+                {surfaceOperators.map((operator) => (
+                  <a
+                    href={`/operators/${operator.slug}`}
+                    class="group relative block overflow-hidden border border-border bg-bg/60 p-6 sm:p-8 hover:border-accent transition-colors"
+                  >
+                    <div class="pointer-events-none absolute inset-0">
+                      <div class="absolute -right-8 top-0 h-28 w-28 rounded-full bg-accent/10 blur-3xl"></div>
+                    </div>
 
-        ))}
+                    <div class="relative">
+                      <img
+                        src={surfaceImage}
+                        alt={`${surface.name} service surface`}
+                        class="mb-6 h-56 w-full rounded border border-border/70 object-cover md:h-64"
+                        loading="lazy"
+                      />
 
+                      <div class="flex items-center gap-5">
+                        <div class="flex h-16 w-28 items-center justify-center border border-border/70 bg-white/[0.02] px-3">
+                          <img
+                            src={operator.logo}
+                            alt={operator.name}
+                            class="max-h-10 h-auto w-auto max-w-full object-contain"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div>
+                          <p class="text-2xl font-medium text-text">
+                            {operator.name}
+                          </p>
+
+                          <p class="mt-1 text-sm text-text/70">
+                            {operator.regionName}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p class="mt-6 max-w-2xl text-base text-muted leading-relaxed">
+                        {operator.tagline}
+                      </p>
+
+                      <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+                        <span class="border border-border/70 px-3 py-1 text-[11px] uppercase tracking-wide text-text/60">
+                          {surface.slug}
+                        </span>
+
+                        <span class="text-sm text-accent group-hover:translate-x-1 transition-transform">
+                          view operator →
+                        </span>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {surfaceOperators.map((operator) => (
+                  <a
+                    href={`/operators/${operator.slug}`}
+                    class="group relative block overflow-hidden border border-border bg-bg/60 p-6 hover:border-accent transition-colors"
+                  >
+                    <div class="pointer-events-none absolute inset-0">
+                      <div class="absolute -right-8 top-0 h-24 w-24 rounded-full bg-accent/10 blur-2xl"></div>
+                    </div>
+
+                    <div class="relative">
+                      <img
+                        src={surfaceImage}
+                        alt={`${surface.name} service surface`}
+                        class="mb-5 h-44 w-full rounded border border-border/70 object-cover"
+                        loading="lazy"
+                      />
+
+                      <div class="flex items-center gap-4">
+                        <div class="flex h-14 w-24 items-center justify-center border border-border/70 bg-white/[0.02] px-2">
+                          <img
+                            src={operator.logo}
+                            alt={operator.name}
+                            class="max-h-8 h-auto w-auto max-w-full object-contain"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div>
+                          <p class="text-lg font-medium text-text">
+                            {operator.name}
+                          </p>
+
+                          <p class="text-sm text-text/70">
+                            {operator.regionName}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p class="mt-5 text-sm text-muted leading-relaxed">
+                        {operator.tagline}
+                      </p>
+
+                      <div class="mt-6 flex items-center justify-between">
+                        <span class="border border-border/70 px-3 py-1 text-[11px] uppercase tracking-wide text-text/60">
+                          {surface.slug}
+                        </span>
+
+                        <span class="text-sm text-accent group-hover:translate-x-1 transition-transform">
+                          view operator →
+                        </span>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div class="mt-8 max-w-3xl overflow-hidden border border-border bg-bg/60">
+            <img
+              src={surfaceImage}
+              alt={surface.name}
+              class="h-56 w-full border-b border-border object-cover md:h-64"
+              loading="lazy"
+            />
+            <div class="p-6">
+              <p class="text-lg font-medium">
+                no live operators yet
+              </p>
+
+              <p class="mt-3 text-sm text-muted leading-relaxed">
+                This surface is present in the router architecture, but no active operators
+                are currently listed on it.
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
+      <section class="mt-20 border-t border-border pt-14">
+        <div class="grid gap-6 lg:grid-cols-3">
+          <a
+            href="/operators"
+            class="border border-border p-5 hover:border-accent transition-colors"
+          >
+            <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
+              operator directory
+            </p>
+            <p class="mt-3 text-lg font-medium">
+              browse operators
+            </p>
+          </a>
+
+          <a
+            href="/us/fl/miami/auto-detailing"
+            class="border border-border p-5 hover:border-accent transition-colors"
+          >
+            <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
+              regional route
+            </p>
+            <p class="mt-3 text-lg font-medium">
+              miami / auto detailing
+            </p>
+          </a>
+
+          <a
+            href="/about"
+            class="border border-border p-5 hover:border-accent transition-colors"
+          >
+            <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
+              network model
+            </p>
+            <p class="mt-3 text-lg font-medium">
+              about planck
+            </p>
+          </a>
+        </div>
+      </section>
     </div>
-
   </main>
-
 </BaseLayout>

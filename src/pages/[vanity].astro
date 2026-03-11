@@ -1,0 +1,58 @@
+---
+import { operators } from "../data/operators";
+
+export function getStaticPaths() {
+  const RESERVED = new Set([
+    "about",
+    "operators",
+    "surfaces",
+    "us",
+  ]);
+
+  const aliasToSlug = new Map<string, string>();
+
+  for (const operator of operators) {
+    const candidates = [operator.slug, operator.subdomain].filter(Boolean);
+
+    if (operator.slug === "qtm-detailing") {
+      candidates.unshift("qtm");
+    }
+
+    for (const candidate of candidates) {
+      const key = String(candidate).toLowerCase().trim();
+      if (!key || RESERVED.has(key)) continue;
+      if (!aliasToSlug.has(key)) {
+        aliasToSlug.set(key, operator.slug);
+      }
+    }
+  }
+
+  return Array.from(aliasToSlug.entries()).map(([vanity, slug]) => ({
+    params: { vanity },
+    props: { slug },
+  }));
+}
+
+const { slug } = Astro.props;
+const target = `/operators/${slug}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <meta http-equiv="refresh" content={`0;url=${target}`} />
+    <link rel="canonical" href={target} />
+    <script is:inline define:vars={{ target }}>
+      window.location.replace(target);
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <p>
+        Redirecting to <a href={target}>{target}</a>
+      </p>
+    </noscript>
+  </body>
+</html>
