@@ -27,14 +27,22 @@ const surfaceImageMap: Record<string, string> = {
   "pressure-cleaning": "/images/surfaces/pressure-cleaning.svg",
 };
 
-const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.svg";
+const surfaceImage =
+  surfaceImageMap[surface.slug] ?? "/images/network-surface.svg";
+
+const operatorImageMap: Record<string, string> = {
+  "qtm-detailing": "/images/banner-qtm.jpg",
+};
 ---
 
 <BaseLayout title={`${surface.name} · Planck Network`}>
   <main class="py-24">
     <div class="mx-auto max-w-content px-4 sm:px-6">
+
       <header class="grid gap-8 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
-        <div class="max-w-3xl">
+
+        <div class="max-w-2xl">
+
           <img
             src={surfaceImage}
             alt={surface.name}
@@ -53,19 +61,23 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
           <p class="mt-6 max-w-2xl text-muted leading-relaxed">
             {surface.description}
           </p>
+
         </div>
 
         <div class="relative overflow-hidden border border-border bg-bg/60 p-6">
+
           <div class="pointer-events-none absolute inset-0">
             <div class="absolute -right-8 top-0 h-32 w-32 rounded-full bg-accent/10 blur-3xl"></div>
           </div>
 
           <div class="relative">
+
             <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
               active surface state
             </p>
 
             <div class="mt-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+
               <div class="border border-border/70 bg-white/[0.02] p-4">
                 <p class="text-xs tracking-wide text-text/60 uppercase">
                   surface
@@ -92,13 +104,15 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                   independent execution
                 </p>
               </div>
+
             </div>
           </div>
         </div>
       </header>
 
       <section class="mt-16">
-        <div class="max-w-3xl">
+
+        <div class="max-w-2xl">
           <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
             active operators
           </p>
@@ -109,27 +123,39 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
         </div>
 
         {surfaceOperators.length > 0 ? (
+
           <div class="mt-8">
+
             {surfaceOperators.length === 1 ? (
-              <div class="max-w-3xl">
+
+              <div class="max-w-2xl">
+
                 {surfaceOperators.map((operator) => (
+
                   <a
                     href={`/operators/${operator.slug}`}
-                    class="group relative block overflow-hidden border border-border bg-bg/60 p-6 sm:p-8 hover:border-accent transition-colors"
+                    class="group relative inline-block overflow-hidden border border-border bg-bg/60 p-6 sm:p-8 hover:border-accent transition-colors"
                   >
+
                     <div class="pointer-events-none absolute inset-0">
                       <div class="absolute -right-8 top-0 h-28 w-28 rounded-full bg-accent/10 blur-3xl"></div>
                     </div>
 
                     <div class="relative">
-                      <img
-                        src={surfaceImage}
-                        alt={`${surface.name} service surface`}
-                        class="mb-6 h-56 w-full rounded border border-border/70 object-cover md:h-64"
-                        loading="lazy"
-                      />
+
+                      <div class="mb-6 overflow-hidden rounded border border-border/70 bg-[#0b1220]">
+
+                        <img
+                          src={operatorImageMap[operator.slug] ?? surfaceImage}
+                          alt={operator.name}
+                          class="h-32 w-full object-cover object-center md:h-36"
+                          loading="lazy"
+                        />
+
+                      </div>
 
                       <div class="flex items-center gap-5">
+
                         <div class="flex h-16 w-28 items-center justify-center border border-border/70 bg-white/[0.02] px-3">
                           <img
                             src={operator.logo}
@@ -138,6 +164,7 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                             loading="lazy"
                           />
                         </div>
+
                         <div>
                           <p class="text-2xl font-medium text-text">
                             {operator.name}
@@ -147,6 +174,7 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                             {operator.regionName}
                           </p>
                         </div>
+
                       </div>
 
                       <p class="mt-6 max-w-2xl text-base text-muted leading-relaxed">
@@ -154,6 +182,7 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                       </p>
 
                       <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+
                         <span class="border border-border/70 px-3 py-1 text-[11px] uppercase tracking-wide text-text/60">
                           {surface.slug}
                         </span>
@@ -161,31 +190,40 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                         <span class="text-sm text-accent group-hover:translate-x-1 transition-transform">
                           view operator →
                         </span>
+
                       </div>
+
                     </div>
                   </a>
                 ))}
               </div>
+
             ) : (
+
               <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+
                 {surfaceOperators.map((operator) => (
+
                   <a
                     href={`/operators/${operator.slug}`}
-                    class="group relative block overflow-hidden border border-border bg-bg/60 p-6 hover:border-accent transition-colors"
+                    class="group relative inline-block overflow-hidden border border-border bg-bg/60 p-6 hover:border-accent transition-colors"
                   >
+
                     <div class="pointer-events-none absolute inset-0">
                       <div class="absolute -right-8 top-0 h-24 w-24 rounded-full bg-accent/10 blur-2xl"></div>
                     </div>
 
                     <div class="relative">
+
                       <img
-                        src={surfaceImage}
-                        alt={`${surface.name} service surface`}
-                        class="mb-5 h-44 w-full rounded border border-border/70 object-cover"
+                        src={operatorImageMap[operator.slug] ?? surfaceImage}
+                        alt={operator.name}
+                        class="mb-5 h-44 w-full rounded border border-border/70 bg-[#0b1220] object-contain"
                         loading="lazy"
                       />
 
                       <div class="flex items-center gap-4">
+
                         <div class="flex h-14 w-24 items-center justify-center border border-border/70 bg-white/[0.02] px-2">
                           <img
                             src={operator.logo}
@@ -194,6 +232,7 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                             loading="lazy"
                           />
                         </div>
+
                         <div>
                           <p class="text-lg font-medium text-text">
                             {operator.name}
@@ -203,6 +242,7 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                             {operator.regionName}
                           </p>
                         </div>
+
                       </div>
 
                       <p class="mt-5 text-sm text-muted leading-relaxed">
@@ -210,6 +250,7 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                       </p>
 
                       <div class="mt-6 flex items-center justify-between">
+
                         <span class="border border-border/70 px-3 py-1 text-[11px] uppercase tracking-wide text-text/60">
                           {surface.slug}
                         </span>
@@ -217,37 +258,50 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
                         <span class="text-sm text-accent group-hover:translate-x-1 transition-transform">
                           view operator →
                         </span>
+
                       </div>
+
                     </div>
                   </a>
                 ))}
+
               </div>
+
             )}
           </div>
+
         ) : (
-          <div class="mt-8 max-w-3xl overflow-hidden border border-border bg-bg/60">
+
+          <div class="mt-8 max-w-2xl overflow-hidden border border-border bg-bg/60">
+
             <img
               src={surfaceImage}
               alt={surface.name}
               class="h-56 w-full border-b border-border object-cover md:h-64"
               loading="lazy"
             />
+
             <div class="p-6">
+
               <p class="text-lg font-medium">
                 no live operators yet
               </p>
 
               <p class="mt-3 text-sm text-muted leading-relaxed">
-                This surface is present in the router architecture, but no active operators
-                are currently listed on it.
+                This surface exists in the router architecture, but no operators
+                are currently listed.
               </p>
+
             </div>
           </div>
+
         )}
       </section>
 
       <section class="mt-20 border-t border-border pt-14">
+
         <div class="grid gap-6 lg:grid-cols-3">
+
           <a
             href="/operators"
             class="border border-border p-5 hover:border-accent transition-colors"
@@ -283,8 +337,10 @@ const surfaceImage = surfaceImageMap[surface.slug] ?? "/images/network-surface.s
               about planck
             </p>
           </a>
+
         </div>
       </section>
+
     </div>
   </main>
 </BaseLayout>
