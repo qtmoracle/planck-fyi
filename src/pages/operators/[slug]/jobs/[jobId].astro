@@ -1,0 +1,486 @@
+---
+export const prerender = false;
+
+import { getOperatorBySlug } from "../../../../data/operators";
+
+const { slug, jobId } = Astro.params;
+
+const operator = getOperatorBySlug(slug ?? "");
+if (!operator) {
+  throw new Error(`Operator not found: ${slug}`);
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{operator.name} — Job {jobId}</title>
+  </head>
+  <body class="bg-white text-black">
+    <main class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <header class="mb-8">
+        <p class="text-xs tracking-wide text-black/60">operator execution surface</p>
+        <h1 class="mt-2 text-3xl font-semibold">{operator.name}</h1>
+        <p class="mt-2 text-sm text-black/70">
+          Region: {operator.regionName} · Surface: {operator.surface}
+        </p>
+        <p class="mt-1 text-sm text-black/70">Job ID: {jobId}</p>
+      </header>
+
+      <section class="grid gap-6">
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">Tech Access</h2>
+          <p class="mt-2 text-sm text-black/70">
+            Single-tech mode. Enter the TECH token to load protected job data.
+          </p>
+
+          <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input
+              id="tech-token"
+              type="password"
+              placeholder="Enter TECH token"
+              class="w-full rounded-xl border border-black/20 px-4 py-2 text-sm"
+            />
+            <button
+              id="save-tech-token-btn"
+              type="button"
+              class="rounded-xl border border-black px-4 py-2 text-sm"
+            >
+              Save Token
+            </button>
+          </div>
+
+          <p id="tech-token-status" class="mt-3 text-sm text-black/60"></p>
+        </div>
+
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">Job Summary</h2>
+          <div id="job-summary" class="mt-4 text-sm text-black/70">
+            Waiting for token...
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">ServiceEvent</h2>
+          <div id="event-summary" class="mt-4 text-sm text-black/70">
+            Waiting for job load...
+          </div>
+
+          <div class="mt-6 flex flex-wrap gap-3">
+            <button
+              id="load-job-btn"
+              type="button"
+              class="rounded-xl border border-black px-4 py-2 text-sm"
+            >
+              Load Job
+            </button>
+
+            <button
+              id="start-service-btn"
+              type="button"
+              class="rounded-xl border border-black px-4 py-2 text-sm"
+              disabled
+            >
+              Start Service
+            </button>
+
+            <button
+              id="complete-service-btn"
+              type="button"
+              class="rounded-xl border border-black px-4 py-2 text-sm"
+              disabled
+            >
+              Complete Service
+            </button>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">Completion</h2>
+
+          <div class="mt-4 grid gap-4">
+            <div>
+              <label for="completion-summary" class="block text-sm font-medium text-black/80">
+                Completion Summary
+              </label>
+              <textarea
+                id="completion-summary"
+                rows="4"
+                class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
+                placeholder="Summarize what was completed..."
+              ></textarea>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label for="payment-status" class="block text-sm font-medium text-black/80">
+                  Payment Status
+                </label>
+                <select
+                  id="payment-status"
+                  class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
+                >
+                  <option value="unpaid">unpaid</option>
+                  <option value="paid">paid</option>
+                  <option value="partial">partial</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="amount-collected" class="block text-sm font-medium text-black/80">
+                  Amount Collected
+                </label>
+                <input
+                  id="amount-collected"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                  class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <p class="text-sm text-black/60">
+              Minimal closeout only for MVP. Evidence, richer notes, and full payment flow come
+              later.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script
+      define:vars={{
+        operatorSlug: operator.slug,
+        operatorSurface: operator.surface,
+        operatorRegion: operator.regionName,
+        jobId: jobId ?? "",
+      }}
+    >
+      const TECH_TOKEN_KEY = "planck.tech_token";
+
+      const techTokenInput = document.getElementById("tech-token");
+      const saveTechTokenBtn = document.getElementById("save-tech-token-btn");
+      const techTokenStatusEl = document.getElementById("tech-token-status");
+
+      const jobSummaryEl = document.getElementById("job-summary");
+      const eventSummaryEl = document.getElementById("event-summary");
+      const loadJobBtn = document.getElementById("load-job-btn");
+      const startBtn = document.getElementById("start-service-btn");
+      const completeBtn = document.getElementById("complete-service-btn");
+
+      const completionSummaryInput = document.getElementById("completion-summary");
+      const paymentStatusInput = document.getElementById("payment-status");
+      const amountCollectedInput = document.getElementById("amount-collected");
+
+      let job = null;
+      let serviceEvent = null;
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function getTechToken() {
+        try {
+          return sessionStorage.getItem(TECH_TOKEN_KEY) || "";
+        } catch {
+          return "";
+        }
+      }
+
+      function setTechToken(value) {
+        try {
+          sessionStorage.setItem(TECH_TOKEN_KEY, value);
+        } catch {}
+      }
+
+      function renderTechTokenStatus() {
+        const token = getTechToken();
+        if (!techTokenStatusEl) return;
+
+        techTokenStatusEl.textContent = token
+          ? "TECH token stored for this browser session."
+          : "No TECH token stored yet.";
+      }
+
+      function renderJob(jobData) {
+        if (!jobSummaryEl) return;
+
+        if (!jobData) {
+          jobSummaryEl.innerHTML = "<p>Job not loaded.</p>";
+          return;
+        }
+
+        const packet = jobData.packet || {};
+        const state = jobData.state || {};
+        const data = packet.data || {};
+        const contact = data.contact || {};
+        const asset = data.asset || {};
+        const request = data.request || {};
+        const notes = data.notes || {};
+
+        jobSummaryEl.innerHTML = `
+          <div class="grid gap-2">
+            <p><strong>Job Status:</strong> ${escapeHtml(state.status || "unknown")}</p>
+            <p><strong>Claimed At:</strong> ${escapeHtml(state.claimed_at || "")}</p>
+            <p><strong>Customer:</strong> ${escapeHtml(contact.name || "unknown")}</p>
+            <p><strong>Email:</strong> ${escapeHtml(contact.email || "")}</p>
+            <p><strong>Phone:</strong> ${escapeHtml(contact.phone || "")}</p>
+            <p><strong>Asset Class:</strong> ${escapeHtml(asset.class || "")}</p>
+            <p><strong>Asset Details:</strong> ${escapeHtml(asset.details || "")}</p>
+            <p><strong>Tier:</strong> ${escapeHtml(request.tier_id || request.tier || "")}</p>
+            <p><strong>Service Area:</strong> ${escapeHtml(request.service_area || "")}</p>
+            <p><strong>Condition Notes:</strong> ${escapeHtml(notes.condition || "")}</p>
+          </div>
+        `;
+      }
+
+      function renderServiceEvent(eventData) {
+        if (!eventSummaryEl || !startBtn || !completeBtn) return;
+
+        if (!eventData) {
+          eventSummaryEl.innerHTML = "<p>No ServiceEvent loaded.</p>";
+          startBtn.disabled = true;
+          completeBtn.disabled = true;
+          return;
+        }
+
+        const paymentStatus = eventData.meta?.payment_status || "";
+        const amountCollected =
+          typeof eventData.meta?.amount_collected === "number"
+            ? String(eventData.meta.amount_collected)
+            : "";
+
+        eventSummaryEl.innerHTML = `
+          <div class="grid gap-2">
+            <p><strong>ServiceEvent ID:</strong> ${escapeHtml(eventData.id)}</p>
+            <p><strong>Status:</strong> ${escapeHtml(eventData.status)}</p>
+            <p><strong>Created:</strong> ${escapeHtml(eventData.timestamps?.created_at || "")}</p>
+            <p><strong>Started:</strong> ${escapeHtml(eventData.timestamps?.started_at || "")}</p>
+            <p><strong>Completed:</strong> ${escapeHtml(eventData.timestamps?.completed_at || "")}</p>
+            <p><strong>Payment Status:</strong> ${escapeHtml(paymentStatus)}</p>
+            <p><strong>Amount Collected:</strong> ${escapeHtml(amountCollected)}</p>
+            <p><strong>Completion Summary:</strong> ${escapeHtml(
+              eventData.outcome?.completion_summary || ""
+            )}</p>
+          </div>
+        `;
+
+        if (completionSummaryInput) {
+          completionSummaryInput.value = eventData.outcome?.completion_summary || "";
+        }
+
+        if (paymentStatusInput) {
+          paymentStatusInput.value = paymentStatus || "unpaid";
+        }
+
+        if (amountCollectedInput) {
+          amountCollectedInput.value = amountCollected;
+        }
+
+        startBtn.disabled = eventData.status !== "created";
+        completeBtn.disabled = eventData.status !== "in_progress";
+      }
+
+      async function loadJob() {
+        const token = getTechToken();
+        if (!token) {
+          throw new Error("missing_tech_token");
+        }
+
+        const res = await fetch(`/api/job/by_id/${encodeURIComponent(jobId)}`, {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            "x-tech-token": token,
+          },
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !data?.ok || !data?.job) {
+          throw new Error(data?.error || `job_load_failed_${res.status}`);
+        }
+
+        return data.job;
+      }
+
+      function buildCreatePayload(jobData) {
+        const packet = jobData.packet || {};
+        const packetData = packet.data || {};
+        const request = packetData.request || {};
+        const notes = packetData.notes || {};
+
+        return {
+          job_id: String(jobData.job_id || jobId),
+          request_id: String(packet.id || `req_${jobId}`),
+          operator_id: String(operatorSlug),
+          customer_id: `cust_${String(jobData.job_id || jobId)}`,
+          asset_id: `asset_${String(jobData.job_id || jobId)}`,
+          location: {
+            type: "onsite",
+            address: String(request.service_area || operatorRegion || ""),
+            geo: {
+              lat: null,
+              lng: null,
+            },
+          },
+          service: {
+            surface: String(operatorSurface || "auto-detailing"),
+            tier: String(request.tier_id || request.tier || "unknown"),
+            scope_notes: String(notes.condition || ""),
+          },
+        };
+      }
+
+      async function createOrLoadServiceEvent(jobData) {
+        const payload = buildCreatePayload(jobData);
+
+        const res = await fetch("/api/service-events/create", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok || !data?.service_event) {
+          throw new Error(data?.error || `service_event_create_failed_${res.status}`);
+        }
+
+        return data.service_event;
+      }
+
+      async function startServiceEventById(serviceEventId) {
+        const res = await fetch("/api/service-events/start", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            service_event_id: serviceEventId,
+          }),
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok || !data?.service_event) {
+          throw new Error(data?.error || `service_event_start_failed_${res.status}`);
+        }
+
+        return data.service_event;
+      }
+
+      async function completeServiceEventById(serviceEventId) {
+        const completion_summary = String(completionSummaryInput?.value || "").trim();
+        const payment_status = String(paymentStatusInput?.value || "unpaid").trim();
+        const amount_raw = String(amountCollectedInput?.value || "").trim();
+
+        const res = await fetch("/api/service-events/complete", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            service_event_id: serviceEventId,
+            completion_summary,
+            payment_status,
+            amount_collected: amount_raw === "" ? null : Number(amount_raw),
+          }),
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok || !data?.service_event) {
+          throw new Error(data?.error || `service_event_complete_failed_${res.status}`);
+        }
+
+        return data.service_event;
+      }
+
+      async function boot() {
+        const existingToken = getTechToken();
+        if (techTokenInput && existingToken) {
+          techTokenInput.value = existingToken;
+        }
+
+        renderTechTokenStatus();
+        renderJob(null);
+        renderServiceEvent(null);
+
+        if (paymentStatusInput) paymentStatusInput.value = "unpaid";
+      }
+
+      saveTechTokenBtn?.addEventListener("click", () => {
+        const value = String(techTokenInput?.value || "").trim();
+        setTechToken(value);
+        renderTechTokenStatus();
+      });
+
+      loadJobBtn?.addEventListener("click", async () => {
+        if (jobSummaryEl) jobSummaryEl.innerHTML = "<p>Loading job context...</p>";
+        if (eventSummaryEl) eventSummaryEl.innerHTML = "<p>Initializing service event...</p>";
+        startBtn.disabled = true;
+        completeBtn.disabled = true;
+
+        try {
+          job = await loadJob();
+          renderJob(job);
+
+          serviceEvent = await createOrLoadServiceEvent(job);
+          renderServiceEvent(serviceEvent);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "unknown_error";
+          if (jobSummaryEl) jobSummaryEl.innerHTML = `<p>Load error: ${escapeHtml(message)}</p>`;
+          if (eventSummaryEl) eventSummaryEl.innerHTML = `<p>Init error: ${escapeHtml(message)}</p>`;
+        }
+      });
+
+      startBtn?.addEventListener("click", async () => {
+        if (!serviceEvent?.id) return;
+
+        startBtn.disabled = true;
+
+        try {
+          serviceEvent = await startServiceEventById(serviceEvent.id);
+          renderServiceEvent(serviceEvent);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "unknown_error";
+          if (eventSummaryEl) {
+            eventSummaryEl.innerHTML += `<p class="mt-3">Start error: ${escapeHtml(message)}</p>`;
+          }
+          renderServiceEvent(serviceEvent);
+        }
+      });
+
+      completeBtn?.addEventListener("click", async () => {
+        if (!serviceEvent?.id) return;
+
+        completeBtn.disabled = true;
+
+        try {
+          serviceEvent = await completeServiceEventById(serviceEvent.id);
+          renderServiceEvent(serviceEvent);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "unknown_error";
+          if (eventSummaryEl) {
+            eventSummaryEl.innerHTML += `<p class="mt-3">Complete error: ${escapeHtml(message)}</p>`;
+          }
+          renderServiceEvent(serviceEvent);
+        }
+      });
+
+      boot();
+    </script>
+  </body>
+</html>
