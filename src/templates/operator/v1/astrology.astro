@@ -1,0 +1,133 @@
+---
+import OperatorLayout from "../../../layouts/OperatorLayout.astro";
+import type { Operator } from "../../../data/operators";
+
+interface Props {
+  operator: Operator;
+}
+
+const { operator } = Astro.props;
+---
+
+<OperatorLayout
+  title={operator.name}
+  operatorName={operator.name}
+  operatorLogo={operator.logo}
+  region={operator.regionName}
+  bookingHref={operator.bookingHref}
+>
+  <main>
+    <section class="relative overflow-hidden min-h-[70vh] py-16 sm:py-24">
+      <div class="absolute inset-0 -z-10">
+        <div class="h-full w-full bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_55%)]"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-bg via-bg/95 to-bg"></div>
+      </div>
+
+      <div class="mx-auto max-w-content px-4 sm:px-6">
+        <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
+          <div class="lg:col-span-8">
+            <p class="text-xs tracking-wide text-text/70">
+              interpretive surface · {operator.regionName.toLowerCase()}
+            </p>
+
+            <h1 class="mt-4 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tightest leading-tight">
+              pattern, timing,<br />and perspective.
+            </h1>
+
+            <p class="mt-7 max-w-2xl text-lg text-text/70 leading-relaxed">
+              structured astrology sessions designed to help clients reflect,
+              orient, and make clearer decisions through symbolic analysis.
+            </p>
+
+            <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a
+                href={operator.bookingHref}
+                class="inline-flex items-center justify-center border border-border px-8 py-4 hover:border-accent transition-colors"
+              >
+                request session
+              </a>
+
+              <a
+                href="#approach"
+                class="inline-flex items-center justify-center px-8 py-4 text-sm text-text hover:text-accent transition-colors"
+              >
+                view approach →
+              </a>
+            </div>
+
+            <div class="mt-10 grid gap-3 sm:grid-cols-3 max-w-2xl">
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs tracking-wide text-text/70">lens</p>
+                <p class="mt-2 text-sm text-text">symbolic pattern recognition.</p>
+              </div>
+
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs tracking-wide text-text/70">focus</p>
+                <p class="mt-2 text-sm text-text">timing, reflection, and decision support.</p>
+              </div>
+
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs tracking-wide text-text/70">format</p>
+                <p class="mt-2 text-sm text-text">structured sessions with clear scope.</p>
+              </div>
+            </div>
+          </div>
+
+          <aside class="lg:col-span-4">
+            <div class="border border-border p-8 space-y-6 bg-bg/70 backdrop-blur-sm">
+              <div>
+                <p class="text-xs tracking-wide text-text/70">session model</p>
+                <p class="mt-2 text-sm text-text">
+                  appointments are reviewed and shaped around session type,
+                  context, and available capacity.
+                </p>
+              </div>
+
+              <div class="border-t border-border pt-6">
+                <p class="text-xs tracking-wide text-text/70">possible themes</p>
+                <ul class="mt-3 space-y-2 text-sm text-text/70 leading-relaxed">
+                  <li>• natal chart interpretation</li>
+                  <li>• timing and transit review</li>
+                  <li>• relationship and compatibility reflection</li>
+                </ul>
+              </div>
+
+              <div class="border-t border-border pt-6">
+                <p class="text-xs tracking-wide text-text/70">approach</p>
+                <ul class="mt-3 space-y-2 text-sm text-text/70 leading-relaxed">
+                  <li>• symbolic, interpretive, and conversational</li>
+                  <li>• structured around client questions</li>
+                  <li>• designed for clarity, not certainty theater</li>
+                </ul>
+              </div>
+
+              <div class="border-t border-border pt-6">
+                <p class="text-xs tracking-wide text-text/70">scope</p>
+                <ul class="mt-3 space-y-2 text-sm text-text/70 leading-relaxed">
+                  <li>• sessions are bounded by time and topic</li>
+                  <li>• preparation may be required before booking</li>
+                  <li>• follow-up formats can be defined later</li>
+                </ul>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section id="approach" class="py-24 border-t border-border">
+      <div class="mx-auto max-w-content px-4 sm:px-6">
+        <div class="max-w-3xl">
+          <h2 class="text-3xl font-semibold">how this surface works</h2>
+
+          <p class="mt-6 text-muted leading-relaxed">
+            This operator surface is now active in the router and ready for
+            future session definitions, intake flows, and expanded astrology
+            service logic. For now, it serves as the canonical entry point for
+            astrology-aligned operator presentation inside the Planck surface engine.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</OperatorLayout>

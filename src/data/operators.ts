@@ -33,6 +33,23 @@ export const operators: Operator[] = [
 
     template: "v1",
     bookingHref: "#request"
+  },
+  {
+    slug: "qtm-astrology",
+    name: "QTM Astrology",
+    logo: "/brand/planck-wordmark.png",
+
+    country: "us",
+    state: "fl",
+    city: "miami",
+
+    regionName: "Miami Dade County",
+
+    surface: "astrology",
+    tagline: "Interpretive analysis for timing, patterns, and decision clarity.",
+
+    template: "v1",
+    bookingHref: "#request-session"
   }
 ];
 
