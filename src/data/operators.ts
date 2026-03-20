@@ -12,7 +12,7 @@ export type Operator = {
   surface: string;
   tagline: string;
 
-  template: "v1-detailing";
+  template: "v1";
   bookingHref: string;
 };
 
@@ -31,7 +31,7 @@ export const operators: Operator[] = [
     surface: "auto-detailing",
     tagline: "Structured execution for vehicles that deserve precision.",
 
-    template: "v1-detailing",
+    template: "v1",
     bookingHref: "#request"
   }
 ];
