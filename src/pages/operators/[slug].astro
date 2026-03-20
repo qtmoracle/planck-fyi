@@ -1,6 +1,7 @@
 ---
-import V1DetailingOperatorTemplate from "../../templates/operator/v1/detailing.astro";
 import { operators, getOperatorBySlug } from "../../data/operators";
+import { getOperatorTemplate } from "../../lib/operator-templates";
+import SurfaceNavigator from "../../components/SurfaceNavigator.astro";
 
 export function getStaticPaths() {
   return operators.map((operator) => ({
@@ -14,12 +15,12 @@ const operator = getOperatorBySlug(slug ?? "");
 if (!operator) {
   throw new Error(`Operator not found: ${slug}`);
 }
+
+const OperatorTemplate = getOperatorTemplate(operator.template, operator.surface);
 ---
 
-{operator.template === "v1" && operator.surface === "auto-detailing" ? (
-  <V1DetailingOperatorTemplate operator={operator} />
+{OperatorTemplate ? (
+  <OperatorTemplate operator={operator} />
 ) : (
-  <div class="mx-auto max-w-content px-4 sm:px-6 py-24">
-    <p class="text-sm text-text/70">Unknown operator template: {operator.template}</p>
-  </div>
+  <SurfaceNavigator template={operator.template} surface={operator.surface} />
 )}

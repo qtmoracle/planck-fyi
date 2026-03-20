@@ -1,0 +1,78 @@
+---
+import { surfaces } from "../data/surfaces";
+
+interface Props {
+  template: string;
+  surface: string;
+}
+
+const {
+  template = "",
+  surface = "",
+} = Astro.props;
+---
+
+<section class="py-24">
+  <div class="mx-auto max-w-content px-4 sm:px-6">
+    <div class="max-w-3xl border border-border bg-bg/60 p-8 sm:p-10">
+      <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
+        surface navigator
+      </p>
+
+      <h1 class="mt-4 text-3xl sm:text-4xl font-semibold tracking-tightest leading-tight">
+        This operator surface is not registered yet
+      </h1>
+
+      <p class="mt-6 text-muted leading-relaxed">
+        No template is currently registered for
+        <span class="text-text font-medium"> {template}:{surface}</span>.
+        You can return to the operator directory or explore currently registered surfaces.
+      </p>
+
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a
+          href="/operators"
+          class="inline-flex items-center justify-center border border-border px-5 py-3 hover:border-accent transition-colors"
+        >
+          Browse operators
+        </a>
+
+        <a
+          href="/"
+          class="inline-flex items-center justify-center border border-border px-5 py-3 hover:border-accent transition-colors"
+        >
+          Back to home
+        </a>
+      </div>
+    </div>
+
+    <section class="mt-14">
+      <p class="text-xs tracking-[0.18em] text-text/60 uppercase">
+        registered surfaces
+      </p>
+
+      <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {surfaces.map((item) => (
+          <a
+            href={`/surfaces/${item.slug}`}
+            class="border border-border bg-bg/60 p-6 hover:border-accent transition-colors"
+          >
+            <p class="text-lg font-medium text-text">
+              {item.name}
+            </p>
+
+            <p class="mt-3 text-sm text-muted leading-relaxed">
+              {item.description}
+            </p>
+
+            <div class="mt-6">
+              <span class="border border-border/70 px-3 py-1 text-[11px] uppercase tracking-wide text-text/60">
+                {item.slug}
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  </div>
+</section>
