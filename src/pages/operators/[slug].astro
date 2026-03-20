@@ -1,5 +1,5 @@
 ---
-import V1OperatorTemplate from "../../templates/operator/v1.astro";
+import V1DetailingOperatorTemplate from "../../templates/operator/v1-detailing.astro";
 import { operators, getOperatorBySlug } from "../../data/operators";
 
 export function getStaticPaths() {
@@ -16,8 +16,8 @@ if (!operator) {
 }
 ---
 
-{operator.template === "v1" ? (
-  <V1OperatorTemplate operator={operator} />
+{operator.template === "v1-detailing" ? (
+  <V1DetailingOperatorTemplate operator={operator} />
 ) : (
   <div class="mx-auto max-w-content px-4 sm:px-6 py-24">
     <p class="text-sm text-text/70">Unknown operator template: {operator.template}</p>
