@@ -10,6 +10,11 @@ export const surfaces: Surface[] = [
     name: "Auto Detailing",
     description: "Structured vehicle surface protocols executed by independent operators.",
   },
+  {
+    slug: "astrology",
+    name: "Astrology",
+    description: "Interpretive analysis surfaces for personal and decision intelligence.",
+  },
 ];
 
 export const surfaceMap: Record<string, Surface> = Object.fromEntries(
