@@ -223,6 +223,12 @@ if (!operator) {
             </div>
           </div>
         </div>
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">Service Report</h2>
+          <div id="service-report" class="mt-4 text-sm text-black/70">
+            Load a job to generate a report.
+          </div>
+        </div>
       </section>
     </main>
 
@@ -372,6 +378,7 @@ if (!operator) {
 
         startBtn.disabled = eventData.status !== "created";
         completeBtn.disabled = eventData.status !== "in_progress";
+        renderReport();
       }
 
       function renderPayment(eventData) {
@@ -392,6 +399,86 @@ if (!operator) {
           const method = meta.payment_method || "—";
           paymentSummaryEl.textContent = `${status} · ${amount} · ${method}`;
         }
+      }
+
+      function renderReport() {
+        const reportEl = document.getElementById("service-report");
+        if (!reportEl) return;
+
+        if (!job || !serviceEvent) {
+          reportEl.innerHTML = "<p>Load a job to generate a report.</p>";
+          return;
+        }
+
+        const snap = job.packet?.intake_snapshot?.data || {};
+        const contact = snap.contact || {};
+        const asset = snap.asset || {};
+        const request = snap.request || {};
+
+        const ts = serviceEvent.timestamps || {};
+        const outcome = serviceEvent.outcome || {};
+        const evidence = serviceEvent.evidence || {};
+        const meta = serviceEvent.meta || {};
+
+        const beforeCount = Array.isArray(evidence.before) ? evidence.before.length : 0;
+        const afterCount = Array.isArray(evidence.after) ? evidence.after.length : 0;
+        const localBeforeCount = localEvidence.before.length;
+        const localAfterCount = localEvidence.after.length;
+
+        function row(label, value) {
+          if (value === null || value === undefined || value === "") return "";
+          return `<div class="flex gap-2 py-0.5">
+            <span class="w-36 shrink-0 text-black/40">${escapeHtml(label)}</span>
+            <span class="text-black/80">${escapeHtml(String(value))}</span>
+          </div>`;
+        }
+
+        function section(title, rows) {
+          const content = rows.filter(Boolean).join("");
+          if (!content) return "";
+          return `<div>
+            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-black/30">${escapeHtml(title)}</p>
+            <div class="grid">${content}</div>
+          </div>`;
+        }
+
+        const amountDisplay = typeof meta.amount_collected === "number"
+          ? `$${meta.amount_collected}`
+          : "";
+
+        // Evidence counts: take max of persisted (from serviceEvent) and local in-memory
+        const effectiveBefore = Math.max(beforeCount, localBeforeCount);
+        const effectiveAfter = Math.max(afterCount, localAfterCount);
+
+        reportEl.innerHTML = `<div class="grid gap-5">
+          ${section("Customer", [
+            row("Name", contact.name),
+          ])}
+          ${section("Asset", [
+            row("Class", asset.class),
+            row("Details", asset.details),
+          ])}
+          ${section("Service", [
+            row("Tier", request.tier_id || request.tier),
+            row("Area", request.service_area),
+          ])}
+          ${section("Execution", [
+            row("Created", ts.created_at),
+            row("Started", ts.started_at),
+            row("Completed", ts.completed_at),
+            row("Summary", outcome.completion_summary),
+          ])}
+          ${section("Evidence", [
+            row("Before photos", String(effectiveBefore)),
+            row("After photos", String(effectiveAfter)),
+          ])}
+          ${section("Payment", [
+            row("Status", meta.payment_status),
+            row("Amount collected", amountDisplay),
+            row("Method", meta.payment_method),
+            row("Note", meta.payment_note),
+          ])}
+        </div>`;
       }
 
       function renderEvidence(stage) {
@@ -785,6 +872,7 @@ if (!operator) {
           }
           serviceEvent = data.service_event;
           renderPayment(serviceEvent);
+          renderReport();
           if (paymentStatusMsg) paymentStatusMsg.textContent = "Saved.";
         } catch (err) {
           const msg = err instanceof Error ? err.message : "save_error";
