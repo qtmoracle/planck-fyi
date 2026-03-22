@@ -5,27 +5,22 @@
 // Storage: R2 env.INTAKE_BUCKET
 // Auth: TECH_TOKEN via header: x-tech-token: <token>
 
-const CORS = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
-  "access-control-allow-headers": "content-type, x-tech-token",
-  "access-control-max-age": "86400",
-};
-
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, { status: 204, headers: CORS });
-};
+import {
+  checkTechAuth,
+  isR2,
+  json,
+  jobPacketKey,
+  JOB_STATE_PREFIX,
+  r2GetJSON,
+} from "./_lib";
 
 export const onRequestGet: PagesFunction = async (ctx) => {
   try {
     const { request, env } = ctx;
 
     // 0) TECH auth
-    const required = String(env?.TECH_TOKEN || "");
-    const provided = String(request.headers.get("x-tech-token") || "");
-    if (!required || provided !== required) {
-      return text("Unauthorized", 401);
-    }
+    const authError = checkTechAuth(request, env);
+    if (authError) return authError;
 
     // 1) R2 binding
     const bucket = env?.INTAKE_BUCKET;
@@ -37,8 +32,7 @@ export const onRequestGet: PagesFunction = async (ctx) => {
     }
 
     // 2) List job state objects
-    const prefix = "planck/job_state/JOB_STATE_v0.01/";
-    const listed = await bucket.list({ prefix, limit: 1000 });
+    const listed = await bucket.list({ prefix: JOB_STATE_PREFIX, limit: 1000 });
     const keys: string[] = (listed?.objects || [])
       .map((o: any) => String(o?.key || ""))
       .filter(Boolean);
@@ -70,10 +64,10 @@ export const onRequestGet: PagesFunction = async (ctx) => {
     }
 
     // 4) Load immutable job packet
-    const jobPacketKey = `planck/job_packets/JOB_PACKET_v0.01/${jobId}.json`;
-    const jobPacket = await r2GetJSON(bucket, jobPacketKey);
+    const packetKey = jobPacketKey(jobId);
+    const jobPacket = await r2GetJSON(bucket, packetKey);
     if (!jobPacket) {
-      return json({ ok: false, error: "job_packet_not_found", job_id: jobId, key: jobPacketKey }, 404);
+      return json({ ok: false, error: "job_packet_not_found", job_id: jobId, key: packetKey }, 404);
     }
 
     return json(
@@ -94,38 +88,3 @@ export const onRequestGet: PagesFunction = async (ctx) => {
     );
   }
 };
-
-/* ---------------- helpers ---------------- */
-
-function withCors(headers: Record<string, string> = {}) {
-  return { ...CORS, ...headers };
-}
-
-function json(obj: any, status = 200) {
-  return new Response(JSON.stringify(obj, null, 2), {
-    status,
-    headers: withCors({ "content-type": "application/json; charset=utf-8" }),
-  });
-}
-
-function text(msg: string, status = 200) {
-  return new Response(msg, {
-    status,
-    headers: withCors({ "content-type": "text/plain; charset=utf-8" }),
-  });
-}
-
-function isR2(bucket: any): boolean {
-  return bucket && typeof bucket.get === "function" && typeof bucket.head === "function" && typeof bucket.list === "function";
-}
-
-async function r2GetJSON(bucket: any, key: string): Promise<any | null> {
-  try {
-    const obj = await bucket.get(key);
-    if (!obj) return null;
-    const txt = await obj.text();
-    return JSON.parse(txt);
-  } catch {
-    return null;
-  }
-}

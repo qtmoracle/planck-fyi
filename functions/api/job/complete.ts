@@ -7,27 +7,23 @@
 // Storage: R2 env.INTAKE_BUCKET
 // Auth: TECH_TOKEN via header: x-tech-token: <token>
 
-const CORS = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
-  "access-control-allow-headers": "content-type, x-tech-token",
-  "access-control-max-age": "86400",
-};
-
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, { status: 204, headers: CORS });
-};
+import {
+  checkTechAuth,
+  completionPacketKey,
+  isR2,
+  json,
+  jobPacketKey,
+  JOB_STATE_PREFIX,
+  r2GetJSON,
+} from "./_lib";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
     const { request, env } = ctx;
 
     // 0) TECH auth
-    const required = String(env?.TECH_TOKEN || "");
-    const provided = String(request.headers.get("x-tech-token") || "");
-    if (!required || provided !== required) {
-      return text("Unauthorized", 401);
-    }
+    const authError = checkTechAuth(request, env);
+    if (authError) return authError;
 
     // 1) R2 binding
     const bucket = env?.INTAKE_BUCKET;
@@ -49,8 +45,7 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     const notes = body && typeof body.notes === "string" ? body.notes : "";
 
     // 3) Find most recent active job state
-    const statePrefix = "planck/job_state/JOB_STATE_v0.01/";
-    const listed = await bucket.list({ prefix: statePrefix, limit: 1000 });
+    const listed = await bucket.list({ prefix: JOB_STATE_PREFIX, limit: 1000 });
     const keys: string[] = (listed?.objects || [])
       .map((o: any) => String(o?.key || ""))
       .filter(Boolean);
@@ -93,16 +88,16 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     }
 
     // 5) Load immutable job packet (needed for hash carry-through)
-    const jobPacketKey = `planck/job_packets/JOB_PACKET_v0.01/${jobId}.json`;
-    const jobPacket = await r2GetJSON(bucket, jobPacketKey);
+    const packetKey = jobPacketKey(jobId);
+    const jobPacket = await r2GetJSON(bucket, packetKey);
     if (!jobPacket) {
-      return json({ ok: false, error: "job_packet_not_found", job_id: jobId, key: jobPacketKey }, 404);
+      return json({ ok: false, error: "job_packet_not_found", job_id: jobId, key: packetKey }, 404);
     }
 
     const jobPacketHashHex = String(jobPacket?.hash?.hex || "");
 
     // 6) Completion packet immutability check
-    const completionKey = `planck/completion_packets/COMPLETION_PACKET_v0.01/${jobId}.json`;
+    const completionKey = completionPacketKey(jobId);
     const existing = await bucket.head(completionKey);
     if (existing) {
       return json({ ok: false, error: "completion_packet_exists", job_id: jobId, key: completionKey }, 409);
@@ -173,34 +168,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
 /* ---------------- helpers ---------------- */
 
-function withCors(headers: Record<string, string> = {}) {
-  return { ...CORS, ...headers };
-}
-
-function json(obj: any, status = 200) {
-  return new Response(JSON.stringify(obj, null, 2), {
-    status,
-    headers: withCors({ "content-type": "application/json; charset=utf-8" }),
-  });
-}
-
-function text(msg: string, status = 200) {
-  return new Response(msg, {
-    status,
-    headers: withCors({ "content-type": "text/plain; charset=utf-8" }),
-  });
-}
-
-function isR2(bucket: any): boolean {
-  return (
-    bucket &&
-    typeof bucket.get === "function" &&
-    typeof bucket.head === "function" &&
-    typeof bucket.list === "function" &&
-    typeof bucket.put === "function"
-  );
-}
-
 // stable stringify for deterministic hashing (objects sorted by key)
 function stableStringify(value: any): string {
   return JSON.stringify(sortKeys(value));
@@ -220,15 +187,4 @@ async function sha256Hex(input: string): Promise<string> {
   const enc = new TextEncoder();
   const buf = await crypto.subtle.digest("SHA-256", enc.encode(input));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function r2GetJSON(bucket: any, key: string): Promise<any | null> {
-  try {
-    const obj = await bucket.get(key);
-    if (!obj) return null;
-    const txt = await obj.text();
-    return JSON.parse(txt);
-  } catch {
-    return null;
-  }
 }
