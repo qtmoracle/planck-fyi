@@ -679,6 +679,26 @@ if (!operator) {
         await routeAfterCompletion();
       });
 
+      async function persistEvidence(serviceEventId, stage, item) {
+        const res = await fetch("/api/service-events/add-evidence", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            service_event_id: serviceEventId,
+            stage,
+            items: [item],
+          }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.error || `persist_evidence_failed_${res.status}`);
+        }
+        return data.service_event;
+      }
+
       beforeCaptureBtn?.addEventListener("click", () => beforeFileInput?.click());
       afterCaptureBtn?.addEventListener("click", () => afterFileInput?.click());
 
@@ -687,10 +707,13 @@ if (!operator) {
         if (!file || !job || !serviceEvent) return;
         beforeCaptureBtn.disabled = true;
         if (beforeUploadStatus) beforeUploadStatus.textContent = "Uploading…";
+        let item;
         try {
-          await uploadPhoto(file, "before");
+          item = await uploadPhoto(file, "before");
           renderEvidence("before");
-          if (beforeUploadStatus) beforeUploadStatus.textContent = "Uploaded.";
+          if (beforeUploadStatus) beforeUploadStatus.textContent = "Saving…";
+          await persistEvidence(serviceEvent.id, "before", item);
+          if (beforeUploadStatus) beforeUploadStatus.textContent = "Saved.";
         } catch (err) {
           const msg = err instanceof Error ? err.message : "upload_error";
           if (beforeUploadStatus) beforeUploadStatus.textContent = `Error: ${escapeHtml(msg)}`;
@@ -705,10 +728,13 @@ if (!operator) {
         if (!file || !job || !serviceEvent) return;
         afterCaptureBtn.disabled = true;
         if (afterUploadStatus) afterUploadStatus.textContent = "Uploading…";
+        let item;
         try {
-          await uploadPhoto(file, "after");
+          item = await uploadPhoto(file, "after");
           renderEvidence("after");
-          if (afterUploadStatus) afterUploadStatus.textContent = "Uploaded.";
+          if (afterUploadStatus) afterUploadStatus.textContent = "Saving…";
+          await persistEvidence(serviceEvent.id, "after", item);
+          if (afterUploadStatus) afterUploadStatus.textContent = "Saved.";
         } catch (err) {
           const msg = err instanceof Error ? err.message : "upload_error";
           if (afterUploadStatus) afterUploadStatus.textContent = `Error: ${escapeHtml(msg)}`;
