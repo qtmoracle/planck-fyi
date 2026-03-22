@@ -1,17 +1,18 @@
-import type { APIRoute } from "astro";
 import {
   completeServiceEvent,
   getServiceEvent,
   isServiceEventPaymentStatus,
   jsonResponse,
   putServiceEvent,
-} from "../../../../src/lib/service-events";
+} from "../../../src/lib/service-events";
+import {
+  composeSurfaceRecord,
+  composeSurfaceSummary,
+} from "../../../src/lib/runtime-adapters";
 
-export const prerender = false;
-
-export const POST: APIRoute = async ({ request, locals }) => {
+export const onRequestPost: PagesFunction = async (ctx) => {
   try {
-    const env = locals.runtime.env;
+    const { request, env } = ctx;
 
     // @ts-ignore
     const bucket: R2Bucket = env.INTAKE_BUCKET;
@@ -20,13 +21,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json().catch(() => null);
     if (!body) return jsonResponse({ ok: false, error: "invalid_json" }, 400);
 
-    const service_event_id = String(body.service_event_id || "").trim();
+    const service_event_id = String((body as any).service_event_id || "").trim();
     if (!service_event_id) {
       return jsonResponse({ ok: false, error: "missing_service_event_id" }, 400);
     }
 
+    const b = body as any;
+
     const payment_status_raw =
-      typeof body.payment_status === "string" ? body.payment_status.trim() : "";
+      typeof b.payment_status === "string" ? b.payment_status.trim() : "";
     const payment_status = payment_status_raw
       ? isServiceEventPaymentStatus(payment_status_raw)
         ? payment_status_raw
@@ -38,16 +41,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     let amount_collected: number | null | undefined = undefined;
-    if (body.amount_collected === null || body.amount_collected === "") {
+    if (b.amount_collected === null || b.amount_collected === "") {
       amount_collected = null;
-    } else if (typeof body.amount_collected === "number" && Number.isFinite(body.amount_collected)) {
-      amount_collected = body.amount_collected;
     } else if (
-      typeof body.amount_collected === "string" &&
-      body.amount_collected.trim() !== "" &&
-      Number.isFinite(Number(body.amount_collected))
+      typeof b.amount_collected === "number" &&
+      Number.isFinite(b.amount_collected)
     ) {
-      amount_collected = Number(body.amount_collected);
+      amount_collected = b.amount_collected;
+    } else if (
+      typeof b.amount_collected === "string" &&
+      b.amount_collected.trim() !== "" &&
+      Number.isFinite(Number(b.amount_collected))
+    ) {
+      amount_collected = Number(b.amount_collected);
     }
 
     const event = await getServiceEvent(bucket, service_event_id);
@@ -55,15 +61,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const updated = completeServiceEvent(event, {
       outcome: {
-        status: typeof body.status === "string" ? body.status : undefined,
-        issues: Array.isArray(body.issues) ? body.issues.map((v) => String(v)) : undefined,
-        recommendations: Array.isArray(body.recommendations)
-          ? body.recommendations.map((v) => String(v))
+        status: typeof b.status === "string" ? b.status : undefined,
+        issues: Array.isArray(b.issues) ? b.issues.map((v: unknown) => String(v)) : undefined,
+        recommendations: Array.isArray(b.recommendations)
+          ? b.recommendations.map((v: unknown) => String(v))
           : undefined,
         completion_summary:
-          typeof body.completion_summary === "string"
-            ? body.completion_summary
-            : undefined,
+          typeof b.completion_summary === "string" ? b.completion_summary : undefined,
       },
       payment_status,
       amount_collected,
@@ -71,10 +75,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await putServiceEvent(bucket, updated);
 
+    const surface = updated.service.surface || "surface-navigator";
+
+    const record = composeSurfaceRecord({
+      surface,
+      job: updated,
+      events: [updated],
+    });
+
+    const summary = composeSurfaceSummary({
+      surface,
+      job: updated,
+      events: [updated],
+    });
+
     return jsonResponse(
       {
         ok: true,
         service_event: updated,
+        record,
+        summary,
       },
       200
     );

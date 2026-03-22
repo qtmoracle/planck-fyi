@@ -18,9 +18,7 @@ import { operators } from "../data/operators";
         </h1>
 
         <p class="mt-8 text-lg text-muted leading-relaxed">
-          planck routes customers to independent operators executing
-          structured service protocols. documentation-first execution.
-          condition-based approvals. no shortcuts.
+          Planck helps customers find trusted independent operators executing structured, documentation-first services.
         </p>
 
         <div class="mt-12 flex flex-col sm:flex-row gap-4">
@@ -31,14 +29,12 @@ import { operators } from "../data/operators";
             browse operators
           </a>
 
-          {operators.length > 0 && (
-            <a
-              href={`/operators/${operators[0].slug}`}
-              class="inline-flex items-center justify-center px-8 py-4 text-text hover:text-accent transition-colors"
-            >
-              view first operator →
-            </a>
-          )}
+          <a
+            href="/router"
+            class="inline-flex items-center justify-center px-8 py-4 text-text hover:text-accent transition-colors"
+          >
+            search the network →
+          </a>
         </div>
       </section>
 
