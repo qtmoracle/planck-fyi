@@ -42,6 +42,34 @@ if (!operator) {
         "x-tech-token": techToken,
       };
 
+      function esc(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function jobCard(job, linkLabel, linkHref) {
+        const snap = job.packet?.intake_snapshot?.data || {};
+        const contact = snap.contact || {};
+        const asset = snap.asset || {};
+        const request = snap.request || {};
+        const status = job.state?.status || "unknown";
+        const customer = esc(contact.name || "—");
+        const assetDesc = esc(asset.details || asset.class || "—");
+        const tier = esc(request.tier || request.tier_id || "—");
+        return `<dl style="margin:0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:14px">
+          <dt style="color:#6b7280">Customer</dt><dd style="margin:0">${customer}</dd>
+          <dt style="color:#6b7280">Asset</dt><dd style="margin:0">${assetDesc}</dd>
+          <dt style="color:#6b7280">Tier</dt><dd style="margin:0">${tier}</dd>
+          <dt style="color:#6b7280">Status</dt><dd style="margin:0">${esc(status)}</dd>
+          <dt style="color:#6b7280">Job ID</dt><dd style="margin:0;font-size:12px;color:#9ca3af">${esc(job.job_id)}</dd>
+        </dl>
+        <p style="margin:12px 0 0"><a href="${esc(linkHref)}">${esc(linkLabel)} →</a></p>`;
+      }
+
       async function loadActive() {
         const el = document.getElementById("active-job");
         try {
@@ -52,7 +80,8 @@ if (!operator) {
             return;
           }
           if (data.job) {
-            el.innerHTML = `Job ID: ${data.job.job_id} — <a href="/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}">Continue Active Job</a>`;
+            const href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}`;
+            el.innerHTML = jobCard(data.job, "Continue Active Job", href);
           } else {
             el.textContent = "No active job.";
           }
@@ -71,7 +100,8 @@ if (!operator) {
             return;
           }
           if (data.job) {
-            el.innerHTML = `Job ID: ${data.job.job_id} — <a href="/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}">Open Next Job</a>`;
+            const href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}`;
+            el.innerHTML = jobCard(data.job, "Open Next Job", href);
           } else {
             el.textContent = "No queued jobs.";
           }
