@@ -230,7 +230,7 @@ if (!operator) {
 
         const packet = jobData.packet || {};
         const state = jobData.state || {};
-        const data = packet.data || {};
+        const data = packet.intake_snapshot?.data || {};
         const contact = data.contact || {};
         const asset = data.asset || {};
         const request = data.request || {};
@@ -321,7 +321,12 @@ if (!operator) {
         }
 
         if (data.job.state?.assigned_to !== operatorSlug) {
-          throw new Error("This job is assigned to a different operator.");
+          throw new Error("Not assigned to you — return to dashboard.");
+        }
+
+        const jobStatus = String(data.job.state?.status || "").toLowerCase();
+        if (jobStatus !== "active") {
+          throw new Error(`Job not claimed — status is "${jobStatus}". Claim the job from the dashboard before executing.`);
         }
 
         return data.job;
@@ -506,8 +511,12 @@ if (!operator) {
           renderServiceEvent(serviceEvent);
         } catch (err) {
           const message = err instanceof Error ? err.message : "unknown_error";
-          if (jobSummaryEl) jobSummaryEl.innerHTML = `<p>Load error: ${escapeHtml(message)}</p>`;
-          if (eventSummaryEl) eventSummaryEl.innerHTML = `<p>Init error: ${escapeHtml(message)}</p>`;
+          if (jobSummaryEl) jobSummaryEl.innerHTML = `<p>Error: ${escapeHtml(message)}</p>`;
+          if (eventSummaryEl) {
+            eventSummaryEl.innerHTML = job
+              ? `<p>Service event error: ${escapeHtml(message)}</p>`
+              : `<p>Job blocked — service event not created.</p>`;
+          }
         }
       });
 
