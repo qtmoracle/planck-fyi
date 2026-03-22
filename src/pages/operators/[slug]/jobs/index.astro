@@ -99,6 +99,40 @@ if (!operator) {
         </div>
 
         <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">Before Photos</h2>
+          <p id="before-evidence-count" class="mt-2 text-sm text-black/70">Load a job to enable photo capture.</p>
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <input id="before-file-input" type="file" accept="image/*" class="hidden" />
+            <button
+              id="before-capture-btn"
+              type="button"
+              class="rounded-xl border border-black px-4 py-2 text-sm"
+              disabled
+            >
+              Add Before Photo
+            </button>
+            <span id="before-upload-status" class="text-sm text-black/60"></span>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">After Photos</h2>
+          <p id="after-evidence-count" class="mt-2 text-sm text-black/70">Load a job to enable photo capture.</p>
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <input id="after-file-input" type="file" accept="image/*" class="hidden" />
+            <button
+              id="after-capture-btn"
+              type="button"
+              class="rounded-xl border border-black px-4 py-2 text-sm"
+              disabled
+            >
+              Add After Photo
+            </button>
+            <span id="after-upload-status" class="text-sm text-black/60"></span>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-black/10 p-5">
           <h2 class="text-lg font-medium">Completion</h2>
 
           <div class="mt-4 grid gap-4">
@@ -185,8 +219,19 @@ if (!operator) {
       const paymentStatusInput = document.getElementById("payment-status");
       const amountCollectedInput = document.getElementById("amount-collected");
 
+      const beforeFileInput = document.getElementById("before-file-input");
+      const beforeCaptureBtn = document.getElementById("before-capture-btn");
+      const beforeEvidenceCount = document.getElementById("before-evidence-count");
+      const beforeUploadStatus = document.getElementById("before-upload-status");
+
+      const afterFileInput = document.getElementById("after-file-input");
+      const afterCaptureBtn = document.getElementById("after-capture-btn");
+      const afterEvidenceCount = document.getElementById("after-evidence-count");
+      const afterUploadStatus = document.getElementById("after-upload-status");
+
       let job = null;
       let serviceEvent = null;
+      const localEvidence = { before: [], after: [] };
 
       function escapeHtml(value) {
         return String(value ?? "")
@@ -297,6 +342,63 @@ if (!operator) {
 
         startBtn.disabled = eventData.status !== "created";
         completeBtn.disabled = eventData.status !== "in_progress";
+      }
+
+      function renderEvidence(stage) {
+        const countEl = stage === "before" ? beforeEvidenceCount : afterEvidenceCount;
+        if (!countEl) return;
+        const count = localEvidence[stage].length;
+        countEl.textContent = count === 0
+          ? "No photos uploaded yet."
+          : `${count} photo${count === 1 ? "" : "s"} uploaded.`;
+      }
+
+      async function uploadPhoto(file, stage) {
+        if (!file.type.startsWith("image/")) {
+          throw new Error("invalid_file_type — select an image file");
+        }
+
+        // Map stage to the category enum accepted by /api/upload-url
+        const category = stage === "before" ? "exterior" : "interior";
+        const rawExt = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const safeName = `${stage}_${Date.now()}.${rawExt || "jpg"}`;
+
+        // 1. Request upload URL
+        const urlRes = await fetch("/api/upload-url", {
+          method: "POST",
+          headers: { "content-type": "application/json; charset=utf-8" },
+          body: JSON.stringify({
+            intake_id: jobId,
+            category,
+            filename: safeName,
+            mime: file.type,
+            bytes: file.size,
+          }),
+        });
+        const urlData = await urlRes.json().catch(() => null);
+        if (!urlRes.ok || !urlData?.ok) {
+          throw new Error(urlData?.error || `upload_url_failed_${urlRes.status}`);
+        }
+
+        // 2. Upload file body to R2
+        const uploadRes = await fetch(urlData.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: { "content-type": file.type },
+        });
+        if (!uploadRes.ok) {
+          throw new Error(`upload_failed_${uploadRes.status}`);
+        }
+
+        // 3. Record evidence item (in-memory only — no /api/service-events/update exists)
+        const item = {
+          key: urlData.key,
+          kind: "photo",
+          caption: "",
+          created_at: new Date().toISOString(),
+        };
+        localEvidence[stage].push(item);
+        return item;
       }
 
       async function loadJob() {
@@ -502,6 +604,8 @@ if (!operator) {
         if (eventSummaryEl) eventSummaryEl.innerHTML = "<p>Initializing service event...</p>";
         startBtn.disabled = true;
         completeBtn.disabled = true;
+        if (beforeCaptureBtn) beforeCaptureBtn.disabled = true;
+        if (afterCaptureBtn) afterCaptureBtn.disabled = true;
 
         try {
           job = await loadJob();
@@ -509,6 +613,11 @@ if (!operator) {
 
           serviceEvent = await createOrLoadServiceEvent(job);
           renderServiceEvent(serviceEvent);
+
+          if (beforeCaptureBtn) beforeCaptureBtn.disabled = false;
+          if (afterCaptureBtn) afterCaptureBtn.disabled = false;
+          renderEvidence("before");
+          renderEvidence("after");
         } catch (err) {
           const message = err instanceof Error ? err.message : "unknown_error";
           if (jobSummaryEl) jobSummaryEl.innerHTML = `<p>Error: ${escapeHtml(message)}</p>`;
@@ -568,6 +677,45 @@ if (!operator) {
         }
 
         await routeAfterCompletion();
+      });
+
+      beforeCaptureBtn?.addEventListener("click", () => beforeFileInput?.click());
+      afterCaptureBtn?.addEventListener("click", () => afterFileInput?.click());
+
+      beforeFileInput?.addEventListener("change", async () => {
+        const file = beforeFileInput.files?.[0];
+        if (!file || !job || !serviceEvent) return;
+        beforeCaptureBtn.disabled = true;
+        if (beforeUploadStatus) beforeUploadStatus.textContent = "Uploading…";
+        try {
+          await uploadPhoto(file, "before");
+          renderEvidence("before");
+          if (beforeUploadStatus) beforeUploadStatus.textContent = "Uploaded.";
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "upload_error";
+          if (beforeUploadStatus) beforeUploadStatus.textContent = `Error: ${escapeHtml(msg)}`;
+        } finally {
+          beforeCaptureBtn.disabled = false;
+          beforeFileInput.value = "";
+        }
+      });
+
+      afterFileInput?.addEventListener("change", async () => {
+        const file = afterFileInput.files?.[0];
+        if (!file || !job || !serviceEvent) return;
+        afterCaptureBtn.disabled = true;
+        if (afterUploadStatus) afterUploadStatus.textContent = "Uploading…";
+        try {
+          await uploadPhoto(file, "after");
+          renderEvidence("after");
+          if (afterUploadStatus) afterUploadStatus.textContent = "Uploaded.";
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "upload_error";
+          if (afterUploadStatus) afterUploadStatus.textContent = `Error: ${escapeHtml(msg)}`;
+        } finally {
+          afterCaptureBtn.disabled = false;
+          afterFileInput.value = "";
+        }
       });
 
       boot();
