@@ -48,7 +48,11 @@ if (!operator) {
             el.textContent = "Error loading active job.";
             return;
           }
-          el.textContent = data.job ? `Job ID: ${data.job.job_id}` : "No active job.";
+          if (data.job) {
+            el.innerHTML = `Job ID: ${data.job.job_id} — <a href="/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}">Continue Active Job</a>`;
+          } else {
+            el.textContent = "No active job.";
+          }
         } catch {
           el.textContent = "Error loading active job.";
         }
@@ -63,7 +67,11 @@ if (!operator) {
             el.textContent = "Error loading next job.";
             return;
           }
-          el.textContent = data.job ? `Job ID: ${data.job.job_id}` : "No queued jobs.";
+          if (data.job) {
+            el.innerHTML = `Job ID: ${data.job.job_id} — <a href="/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}">Open Next Job</a>`;
+          } else {
+            el.textContent = "No queued jobs.";
+          }
         } catch {
           el.textContent = "Error loading next job.";
         }
