@@ -27,6 +27,8 @@ export const onRequestGet: PagesFunction = async (ctx) => {
     const jobId = String((params as any)?.job_id || "").trim();
     if (!jobId) return json({ ok: false, error: "missing_job_id" }, 400);
 
+    const operatorSlug = String(request.headers.get("x-operator-slug") || "").trim();
+
     // 3) Load immutable job packet
     const jobPacketKey = `planck/job_packets/JOB_PACKET_v0.01/${jobId}.json`;
     const jobPacket = await r2GetJSON(bucket, jobPacketKey);
@@ -63,6 +65,10 @@ export const onRequestGet: PagesFunction = async (ctx) => {
         },
         404
       );
+    }
+
+    if (operatorSlug && found.state?.assigned_to !== operatorSlug) {
+      return json({ ok: false, error: "not_assigned_to_operator" }, 403);
     }
 
     return json(
