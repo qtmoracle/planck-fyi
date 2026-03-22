@@ -61,17 +61,26 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
               <button
                 type="button"
-                class="block w-full px-4 py-4 text-left hover:bg-white/5 transition-colors"
+                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
                 data-route="/operators/qtm-detailing"
               >
                 <span class="block text-sm text-text">qtm detailing</span>
+                <span class="mt-1 block text-xs text-muted">operator</span>
+              </button>
+
+              <button
+                type="button"
+                class="block w-full px-4 py-4 text-left hover:bg-white/5 transition-colors"
+                data-route="/operators/qtm-astrology"
+              >
+                <span class="block text-sm text-text">qtm astrology</span>
                 <span class="mt-1 block text-xs text-muted">operator</span>
               </button>
             </div>
           </div>
 
           <p class="mt-3 text-xs text-muted">
-            try: auto detailing · miami · qtm detailing
+            try: auto detailing · miami · qtm detailing · qtm astrology
           </p>
         </div>
 
@@ -122,6 +131,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         {
           terms: ["qtm detailing", "qtm", "operator"],
           route: "/operators/qtm-detailing",
+        },
+        {
+          terms: ["qtm astrology", "astrology"],
+          route: "/operators/qtm-astrology",
         },
       ];
 
