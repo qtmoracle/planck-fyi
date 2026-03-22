@@ -1,0 +1,76 @@
+---
+import { operators, getOperatorBySlug } from "../../../data/operators";
+
+export function getStaticPaths() {
+  return operators.map((op) => ({ params: { slug: op.slug } }));
+}
+
+const { slug } = Astro.params;
+const operator = getOperatorBySlug(slug ?? "");
+if (!operator) {
+  throw new Error(`Operator not found: ${slug}`);
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{operator.name} — Dashboard</title>
+  </head>
+  <body>
+    <main>
+      <h1>{operator.name} — Dashboard</h1>
+
+      <section>
+        <h2>Active Job</h2>
+        <div id="active-job">Loading...</div>
+      </section>
+
+      <section>
+        <h2>Next Job</h2>
+        <div id="current-job">Loading...</div>
+      </section>
+    </main>
+
+    <script define:vars={{ operatorSlug: operator.slug }}>
+      const headers = {
+        accept: "application/json",
+        "x-operator-slug": operatorSlug,
+      };
+
+      async function loadActive() {
+        const el = document.getElementById("active-job");
+        try {
+          const res = await fetch("/api/job/active", { method: "GET", headers });
+          const data = await res.json().catch(() => null);
+          if (!data?.ok) {
+            el.textContent = "Error loading active job.";
+            return;
+          }
+          el.textContent = data.job ? `Job ID: ${data.job.job_id}` : "No active job.";
+        } catch {
+          el.textContent = "Error loading active job.";
+        }
+      }
+
+      async function loadCurrent() {
+        const el = document.getElementById("current-job");
+        try {
+          const res = await fetch("/api/job/current", { method: "GET", headers });
+          const data = await res.json().catch(() => null);
+          if (!data?.ok) {
+            el.textContent = "Error loading next job.";
+            return;
+          }
+          el.textContent = data.job ? `Job ID: ${data.job.job_id}` : "No queued jobs.";
+        } catch {
+          el.textContent = "Error loading next job.";
+        }
+      }
+
+      loadActive();
+      loadCurrent();
+    </script>
+  </body>
+</html>
