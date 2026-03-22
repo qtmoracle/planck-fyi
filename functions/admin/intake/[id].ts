@@ -1,3 +1,5 @@
+import { operators } from "../../../src/data/operators";
+
 function unauthorized() {
   return new Response("Unauthorized", {
     status: 401,
@@ -236,6 +238,9 @@ export const onRequestGet: PagesFunction = async (ctx) => {
 
       <form method="POST" action="/admin/job/create/${encodeURIComponent(id)}" style="margin-top:12px">
         <div class="kv">
+          <div class="k">Operator</div>
+          <div><select name="assigned_to" required>${operators.map(op => `<option value="${esc(op.slug)}"${op.slug === "qtm-detailing" ? " selected" : ""}>${esc(op.name || op.slug)}</option>`).join("")}</select></div>
+
           <div class="k">Day</div>
           <div><input type="date" name="day" required /></div>
 
