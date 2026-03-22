@@ -24,3 +24,24 @@ const OperatorTemplate = getOperatorTemplate(operator.template, operator.surface
 ) : (
   <SurfaceNavigator template={operator.template} surface={operator.surface} />
 )}
+
+<script define:vars={{ operatorSlug: operator.slug }}>
+  (async () => {
+    const headers = { accept: "application/json", "x-operator-slug": operatorSlug };
+
+    const activeRes = await fetch("/api/job/active", { method: "GET", headers }).catch(() => null);
+    const activeData = activeRes ? await activeRes.json().catch(() => null) : null;
+
+    if (activeData?.ok && activeData?.job) {
+      window.location.href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(activeData.job.job_id)}`;
+      return;
+    }
+
+    const currentRes = await fetch("/api/job/current", { method: "GET", headers }).catch(() => null);
+    const currentData = currentRes ? await currentRes.json().catch(() => null) : null;
+
+    if (currentData?.ok && currentData?.job) {
+      window.location.href = `/operators/${operatorSlug}/dashboard`;
+    }
+  })();
+</script>
