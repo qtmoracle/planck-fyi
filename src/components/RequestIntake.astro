@@ -178,25 +178,14 @@ const TIER_MAP_SERVER = {
         </label>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-2">
-        <label class="grid gap-2">
-          <span class="text-sm text-muted">Preferred day(s)</span>
-          <input
-            name="preferred_days"
-            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
-            placeholder="e.g., Tue/Thu"
-          />
-        </label>
-
-        <label class="grid gap-2">
-          <span class="text-sm text-muted">Preferred time window</span>
-          <input
-            name="preferred_window"
-            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
-            placeholder="e.g., 10–2"
-          />
-        </label>
-      </div>
+      <label class="grid gap-2">
+        <span class="text-sm text-muted">Preferred timing <span class="text-text/50">(optional)</span></span>
+        <input
+          name="preferred_days"
+          class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="e.g., Tue/Thu 10–2 or weekend mornings"
+        />
+      </label>
 
       <label class="grid gap-2">
         <span class="text-sm text-muted">Condition notes (be honest)</span>
@@ -210,13 +199,12 @@ const TIER_MAP_SERVER = {
       </label>
 
       <label class="grid gap-2">
-        <span class="text-sm text-muted">Access notes</span>
-        <textarea
+        <span class="text-sm text-muted">Access / Parking <span class="text-text/50">(optional)</span></span>
+        <input
           name="access_notes"
-          rows="3"
-          class="w-full rounded-xl border border-border bg-bg p-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
-          placeholder="Parking, gate/code, shade/garage, water access (if any), etc."
-        ></textarea>
+          class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="Gate code, parking spot, shade available, water access, etc."
+        />
       </label>
 
       <!-- PHOTOS -->

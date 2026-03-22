@@ -190,7 +190,7 @@ export const onRequestGet: PagesFunction = async (ctx) => {
     const st = await readState(bucket, id);
     if (statusFilter && st.status !== statusFilter) continue;
 
-    const dateStr = dateObj ? dateObj.toISOString() : (uploaded ? uploaded.toISOString() : "");
+    const dateStr = dateObj ? dateObj.toISOString().slice(0, 10) : (uploaded ? uploaded.toISOString().slice(0, 10) : "");
     const pillClass = `pill ${st.status}`;
 
     rows.push(`

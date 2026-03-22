@@ -428,6 +428,11 @@ if (!operator) {
         renderServiceEvent(null);
 
         if (paymentStatusInput) paymentStatusInput.value = "unpaid";
+
+        // Auto-load if job ID is in URL and token is already stored.
+        if (jobId && existingToken) {
+          loadJobBtn?.click();
+        }
       }
 
       saveTechTokenBtn?.addEventListener("click", () => {
@@ -474,6 +479,8 @@ if (!operator) {
 
       completeBtn?.addEventListener("click", async () => {
         if (!serviceEvent?.id) return;
+
+        if (!confirm("Mark this job as complete? This cannot be undone.")) return;
 
         completeBtn.disabled = true;
 

@@ -171,6 +171,7 @@ export const onRequestGet: PagesFunction = async (ctx) => {
       </div>
       <div class="actions">
         <span class="${pillClass}">${esc(st.status)}</span>
+        ${(st.status === "queued" || st.status === "completed") ? `<a href="/operators/qtm-detailing/jobs/?job=job_${encodeURIComponent(id)}" style="background:#166534;color:#fff;padding:6px 14px;border-radius:10px;font-size:13px;text-decoration:none;">Open Job →</a>` : ""}
         <a class="meta" href="/admin">← Back to list</a>
       </div>
     </div>
@@ -252,6 +253,10 @@ export const onRequestGet: PagesFunction = async (ctx) => {
         <div class="help">
           Single-tech mode: one active job at a time. This will mint <span class="meta">JOB_PACKET_v0.01</span>.
         </div>
+        ${(st.status === "queued" || st.status === "completed") ? `
+        <div class="help" style="margin-top:10px;border-top:1px solid #e5e7eb;padding-top:10px">
+          Job surface URL: <code style="font-size:12px;background:#f3f4f6;padding:2px 6px;border-radius:6px">/operators/qtm-detailing/jobs/?job=job_${esc(id)}</code>
+        </div>` : ""}
       </form>
     </div>
 
