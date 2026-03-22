@@ -34,9 +34,12 @@ if (!operator) {
     </main>
 
     <script define:vars={{ operatorSlug: operator.slug }}>
+      let techToken = "";
+      try { techToken = sessionStorage.getItem("planck.tech_token") || ""; } catch {}
       const headers = {
         accept: "application/json",
         "x-operator-slug": operatorSlug,
+        "x-tech-token": techToken,
       };
 
       async function loadActive() {

@@ -27,7 +27,9 @@ const OperatorTemplate = getOperatorTemplate(operator.template, operator.surface
 
 <script define:vars={{ operatorSlug: operator.slug }}>
   (async () => {
-    const headers = { accept: "application/json", "x-operator-slug": operatorSlug };
+    let techToken = "";
+    try { techToken = sessionStorage.getItem("planck.tech_token") || ""; } catch {}
+    const headers = { accept: "application/json", "x-operator-slug": operatorSlug, "x-tech-token": techToken };
 
     const activeRes = await fetch("/api/job/active", { method: "GET", headers }).catch(() => null);
     const activeData = activeRes ? await activeRes.json().catch(() => null) : null;
