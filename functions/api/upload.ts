@@ -14,13 +14,16 @@ export const onRequestPut: PagesFunction = async (ctx) => {
     if (!key || key.length < 10) return json({ ok: false, error: "invalid_key" }, 400);
     if (!mime.startsWith("image/")) return json({ ok: false, error: "invalid_mime" }, 400);
 
-    const body = request.body;
-    if (!body) return json({ ok: false, error: "missing_body" }, 400);
+    if (!request.body) return json({ ok: false, error: "missing_body" }, 400);
 
     // Optional size guard (best-effort)
     if (Number.isFinite(bytesParam) && bytesParam > 20_000_000) {
       return json({ ok: false, error: "too_large" }, 413);
     }
+
+    // Read into ArrayBuffer — more reliable than passing ReadableStream
+    // directly to bucket.put() in wrangler's local R2 simulation.
+    const body = await request.arrayBuffer();
 
     // Write to R2
     await bucket.put(key, body, {

@@ -11,7 +11,7 @@ function corsHeaders(req: Request): Headers {
 
   // allow the tech token header + standard headers
   h.set("Access-Control-Allow-Headers", "x-tech-token, content-type, accept");
-  h.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  h.set("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
   h.set("Access-Control-Max-Age", "86400");
 
   // Only needed if you ever use cookies/credentials (you currently don't)
