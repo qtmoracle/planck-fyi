@@ -28,6 +28,9 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     const intakeId = String((params as any)?.id || "").trim();
     if (!intakeId) return json({ ok: false, error: "missing_intake_id" }, 400);
 
+    const body = await request.json().catch(() => null);
+    const assignedTo = body?.assigned_to ? String(body.assigned_to).trim() : "qtm-detailing";
+
     // 2) R2 binding
     const bucket = env?.INTAKE_BUCKET;
     if (!isR2(bucket)) {
@@ -93,7 +96,7 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       intake_id: intakeId,
       status: "queued",
       queued_at: now,
-      assigned_to: "qtm-detailing",
+      assigned_to: assignedTo,
       last_updated_at: now,
     };
 
