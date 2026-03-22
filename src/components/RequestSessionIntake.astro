@@ -1,0 +1,143 @@
+---
+// src/components/RequestSessionIntake.astro
+// Minimal astrology session request form.
+// Constructs a mailto on submit — no backend required.
+---
+
+<div class="rounded-2xl border border-border bg-surface p-4 sm:p-6 md:p-10">
+  <div class="max-w-[76ch]">
+    <h3 class="text-xl sm:text-2xl font-semibold tracking-tight">
+      Submit a Request
+    </h3>
+
+    <p class="mt-3 text-muted leading-relaxed">
+      Fill in the fields below. Submitting opens your email client with a
+      pre-filled message — review it before sending.
+    </p>
+  </div>
+
+  <form id="session-intake" class="mt-8 grid gap-6" novalidate>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <label class="grid gap-2">
+        <span class="text-sm text-muted">Name</span>
+        <input
+          required
+          id="si-name"
+          name="name"
+          autocomplete="name"
+          class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="First + last"
+        />
+      </label>
+
+      <label class="grid gap-2">
+        <span class="text-sm text-muted">Email</span>
+        <input
+          required
+          id="si-email"
+          type="email"
+          name="email"
+          autocomplete="email"
+          class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="you@domain.com"
+        />
+      </label>
+    </div>
+
+    <label class="grid gap-2">
+      <span class="text-sm text-muted">Focus area</span>
+      <textarea
+        required
+        id="si-focus"
+        name="focus_area"
+        rows="3"
+        class="w-full rounded-xl border border-border bg-bg p-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+        placeholder="What do you want to explore? e.g. career timing, relationship patterns, a specific decision"
+      ></textarea>
+    </label>
+
+    <label class="grid gap-2">
+      <span class="text-sm text-muted">
+        Timing context
+        <span class="text-text/50">(optional)</span>
+      </span>
+      <input
+        id="si-timing"
+        name="timing_context"
+        class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+        placeholder="e.g. major decision coming up, feeling stuck, upcoming life change"
+      />
+    </label>
+
+    <label class="grid gap-2">
+      <span class="text-sm text-muted">Birth data available</span>
+      <select
+        required
+        id="si-birth"
+        name="birth_data"
+        class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+      >
+        <option value="">Select…</option>
+        <option value="Yes — date, time, and location">Yes — date, time, and location</option>
+        <option value="Partial — date only or approximate time">Partial — date only or approximate time</option>
+        <option value="No — not available">No — not available</option>
+      </select>
+    </label>
+
+    <div class="flex justify-end">
+      <button
+        type="submit"
+        class="h-11 rounded-xl border border-border bg-bg px-8 text-sm font-medium text-text hover:border-accent transition-colors"
+      >
+        Open email client →
+      </button>
+    </div>
+
+    <p class="text-xs text-muted">
+      This opens your default email client with a pre-filled message.
+      Nothing is sent automatically.
+    </p>
+
+  </form>
+</div>
+
+<script is:inline>
+  (function () {
+    var form = document.getElementById("session-intake");
+    if (!form) return;
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      var name   = (document.getElementById("si-name")  || {}).value || "";
+      var email  = (document.getElementById("si-email") || {}).value || "";
+      var focus  = (document.getElementById("si-focus") || {}).value || "";
+      var timing = (document.getElementById("si-timing")|| {}).value || "";
+      var birth  = (document.getElementById("si-birth") || {}).value || "";
+
+      if (!name || !email || !focus || !birth) {
+        form.reportValidity();
+        return;
+      }
+
+      var body = [
+        "Name: "   + name,
+        "Email: "  + email,
+        "",
+        "Focus Area:",
+        focus,
+        "",
+        "Timing Context: " + (timing || "Not provided"),
+        "Birth Data Available: " + birth,
+      ].join("\n");
+
+      var mailto =
+        "mailto:planckfyi@gmail.com" +
+        "?subject=" + encodeURIComponent("Astrology Session Request") +
+        "&body="    + encodeURIComponent(body);
+
+      window.location.href = mailto;
+    });
+  })();
+</script>

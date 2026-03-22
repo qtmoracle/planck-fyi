@@ -1,5 +1,6 @@
 ---
 import OperatorLayout from "../../../layouts/OperatorLayout.astro";
+import RequestSessionIntake from "../../../components/RequestSessionIntake.astro";
 import type { Operator } from "../../../data/operators";
 
 interface Props {
@@ -131,6 +132,10 @@ const { operator } = Astro.props;
             and whether you have birth data available. This helps shape the session
             before the first exchange.
           </p>
+
+          <div class="mt-10">
+            <RequestSessionIntake />
+          </div>
         </div>
       </div>
     </section>
