@@ -133,6 +133,80 @@ if (!operator) {
         </div>
 
         <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">Payment</h2>
+          <p id="payment-summary" class="mt-2 text-sm text-black/70">Load a job to record payment.</p>
+          <div class="mt-4 grid gap-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label for="pay-status" class="block text-sm font-medium text-black/80">Status</label>
+                <select
+                  id="pay-status"
+                  class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
+                  disabled
+                >
+                  <option value="unpaid">unpaid</option>
+                  <option value="partial">partial</option>
+                  <option value="paid">paid</option>
+                  <option value="waived">waived</option>
+                </select>
+              </div>
+              <div>
+                <label for="pay-amount" class="block text-sm font-medium text-black/80">Amount Collected</label>
+                <input
+                  id="pay-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                  class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
+                  placeholder="0.00"
+                  disabled
+                />
+              </div>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label for="pay-method" class="block text-sm font-medium text-black/80">Method</label>
+                <select
+                  id="pay-method"
+                  class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
+                  disabled
+                >
+                  <option value="">— select —</option>
+                  <option value="cash">cash</option>
+                  <option value="zelle">zelle</option>
+                  <option value="venmo">venmo</option>
+                  <option value="cash_app">cash app</option>
+                  <option value="card">card</option>
+                  <option value="other">other</option>
+                </select>
+              </div>
+              <div>
+                <label for="pay-note" class="block text-sm font-medium text-black/80">Note (optional)</label>
+                <input
+                  id="pay-note"
+                  type="text"
+                  class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
+                  placeholder="e.g. Zelle sent at 12:30pm"
+                  disabled
+                />
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                id="save-payment-btn"
+                type="button"
+                class="rounded-xl border border-black px-4 py-2 text-sm"
+                disabled
+              >
+                Save Payment
+              </button>
+              <span id="payment-status-msg" class="text-sm text-black/60"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-black/10 p-5">
           <h2 class="text-lg font-medium">Completion</h2>
 
           <div class="mt-4 grid gap-4">
@@ -147,42 +221,6 @@ if (!operator) {
                 placeholder="Summarize what was completed..."
               ></textarea>
             </div>
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label for="payment-status" class="block text-sm font-medium text-black/80">
-                  Payment Status
-                </label>
-                <select
-                  id="payment-status"
-                  class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
-                >
-                  <option value="unpaid">unpaid</option>
-                  <option value="paid">paid</option>
-                  <option value="partial">partial</option>
-                </select>
-              </div>
-
-              <div>
-                <label for="amount-collected" class="block text-sm font-medium text-black/80">
-                  Amount Collected
-                </label>
-                <input
-                  id="amount-collected"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  inputmode="decimal"
-                  class="mt-2 w-full rounded-xl border border-black/20 px-4 py-3 text-sm"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
-            <p class="text-sm text-black/60">
-              Minimal closeout only for MVP. Evidence, richer notes, and full payment flow come
-              later.
-            </p>
           </div>
         </div>
       </section>
@@ -216,8 +254,14 @@ if (!operator) {
       const completeBtn = document.getElementById("complete-service-btn");
 
       const completionSummaryInput = document.getElementById("completion-summary");
-      const paymentStatusInput = document.getElementById("payment-status");
-      const amountCollectedInput = document.getElementById("amount-collected");
+
+      const payStatusInput = document.getElementById("pay-status");
+      const payAmountInput = document.getElementById("pay-amount");
+      const payMethodInput = document.getElementById("pay-method");
+      const payNoteInput = document.getElementById("pay-note");
+      const savePaymentBtn = document.getElementById("save-payment-btn");
+      const paymentStatusMsg = document.getElementById("payment-status-msg");
+      const paymentSummaryEl = document.getElementById("payment-summary");
 
       const beforeFileInput = document.getElementById("before-file-input");
       const beforeCaptureBtn = document.getElementById("before-capture-btn");
@@ -307,12 +351,6 @@ if (!operator) {
           return;
         }
 
-        const paymentStatus = eventData.meta?.payment_status || "";
-        const amountCollected =
-          typeof eventData.meta?.amount_collected === "number"
-            ? String(eventData.meta.amount_collected)
-            : "";
-
         eventSummaryEl.innerHTML = `
           <div class="grid gap-2">
             <p><strong>ServiceEvent ID:</strong> ${escapeHtml(eventData.id)}</p>
@@ -320,8 +358,6 @@ if (!operator) {
             <p><strong>Created:</strong> ${escapeHtml(eventData.timestamps?.created_at || "")}</p>
             <p><strong>Started:</strong> ${escapeHtml(eventData.timestamps?.started_at || "")}</p>
             <p><strong>Completed:</strong> ${escapeHtml(eventData.timestamps?.completed_at || "")}</p>
-            <p><strong>Payment Status:</strong> ${escapeHtml(paymentStatus)}</p>
-            <p><strong>Amount Collected:</strong> ${escapeHtml(amountCollected)}</p>
             <p><strong>Completion Summary:</strong> ${escapeHtml(
               eventData.outcome?.completion_summary || ""
             )}</p>
@@ -332,16 +368,30 @@ if (!operator) {
           completionSummaryInput.value = eventData.outcome?.completion_summary || "";
         }
 
-        if (paymentStatusInput) {
-          paymentStatusInput.value = paymentStatus || "unpaid";
-        }
-
-        if (amountCollectedInput) {
-          amountCollectedInput.value = amountCollected;
-        }
+        renderPayment(eventData);
 
         startBtn.disabled = eventData.status !== "created";
         completeBtn.disabled = eventData.status !== "in_progress";
+      }
+
+      function renderPayment(eventData) {
+        const meta = eventData?.meta || {};
+        if (payStatusInput) payStatusInput.value = meta.payment_status || "unpaid";
+        if (payAmountInput) {
+          payAmountInput.value = typeof meta.amount_collected === "number"
+            ? String(meta.amount_collected)
+            : "";
+        }
+        if (payMethodInput) payMethodInput.value = meta.payment_method || "";
+        if (payNoteInput) payNoteInput.value = meta.payment_note || "";
+        if (paymentSummaryEl) {
+          const status = meta.payment_status || "unpaid";
+          const amount = typeof meta.amount_collected === "number"
+            ? `$${meta.amount_collected}`
+            : "—";
+          const method = meta.payment_method || "—";
+          paymentSummaryEl.textContent = `${status} · ${amount} · ${method}`;
+        }
       }
 
       function renderEvidence(stage) {
@@ -504,8 +554,6 @@ if (!operator) {
 
       async function completeServiceEventById(serviceEventId) {
         const completion_summary = String(completionSummaryInput?.value || "").trim();
-        const payment_status = String(paymentStatusInput?.value || "unpaid").trim();
-        const amount_raw = String(amountCollectedInput?.value || "").trim();
 
         const res = await fetch("/api/service-events/complete", {
           method: "POST",
@@ -516,8 +564,6 @@ if (!operator) {
           body: JSON.stringify({
             service_event_id: serviceEventId,
             completion_summary,
-            payment_status,
-            amount_collected: amount_raw === "" ? null : Number(amount_raw),
           }),
         });
 
@@ -585,8 +631,6 @@ if (!operator) {
         renderJob(null);
         renderServiceEvent(null);
 
-        if (paymentStatusInput) paymentStatusInput.value = "unpaid";
-
         // Auto-load if job ID is in URL and token is already stored.
         if (jobId && existingToken) {
           loadJobBtn?.click();
@@ -606,6 +650,11 @@ if (!operator) {
         completeBtn.disabled = true;
         if (beforeCaptureBtn) beforeCaptureBtn.disabled = true;
         if (afterCaptureBtn) afterCaptureBtn.disabled = true;
+        if (payStatusInput) payStatusInput.disabled = true;
+        if (payAmountInput) payAmountInput.disabled = true;
+        if (payMethodInput) payMethodInput.disabled = true;
+        if (payNoteInput) payNoteInput.disabled = true;
+        if (savePaymentBtn) savePaymentBtn.disabled = true;
 
         try {
           job = await loadJob();
@@ -618,6 +667,12 @@ if (!operator) {
           if (afterCaptureBtn) afterCaptureBtn.disabled = false;
           renderEvidence("before");
           renderEvidence("after");
+
+          if (payStatusInput) payStatusInput.disabled = false;
+          if (payAmountInput) payAmountInput.disabled = false;
+          if (payMethodInput) payMethodInput.disabled = false;
+          if (payNoteInput) payNoteInput.disabled = false;
+          if (savePaymentBtn) savePaymentBtn.disabled = false;
         } catch (err) {
           const message = err instanceof Error ? err.message : "unknown_error";
           if (jobSummaryEl) jobSummaryEl.innerHTML = `<p>Error: ${escapeHtml(message)}</p>`;
@@ -698,6 +753,46 @@ if (!operator) {
         }
         return data.service_event;
       }
+
+      savePaymentBtn?.addEventListener("click", async () => {
+        if (!serviceEvent?.id) return;
+        if (savePaymentBtn) savePaymentBtn.disabled = true;
+        if (paymentStatusMsg) paymentStatusMsg.textContent = "Saving…";
+
+        const payment_status = payStatusInput?.value || "unpaid";
+        const amount_raw = String(payAmountInput?.value || "").trim();
+        const payment_method = payMethodInput?.value || "";
+        const payment_note = String(payNoteInput?.value || "").trim();
+
+        try {
+          const res = await fetch("/api/service-events/update-payment", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json; charset=utf-8",
+              accept: "application/json",
+            },
+            body: JSON.stringify({
+              service_event_id: serviceEvent.id,
+              payment_status,
+              amount_collected: amount_raw === "" ? null : Number(amount_raw),
+              payment_method: payment_method || undefined,
+              payment_note: payment_note || undefined,
+            }),
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data?.ok) {
+            throw new Error(data?.error || `update_payment_failed_${res.status}`);
+          }
+          serviceEvent = data.service_event;
+          renderPayment(serviceEvent);
+          if (paymentStatusMsg) paymentStatusMsg.textContent = "Saved.";
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "save_error";
+          if (paymentStatusMsg) paymentStatusMsg.textContent = `Error: ${escapeHtml(msg)}`;
+        } finally {
+          if (savePaymentBtn) savePaymentBtn.disabled = false;
+        }
+      });
 
       beforeCaptureBtn?.addEventListener("click", () => beforeFileInput?.click());
       afterCaptureBtn?.addEventListener("click", () => afterFileInput?.click());

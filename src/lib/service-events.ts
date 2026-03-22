@@ -1,7 +1,7 @@
 export type ServiceEventStatus = "created" | "in_progress" | "completed";
 export type EvidenceStage = "arrival" | "before" | "after";
 export type NoteChannel = "internal" | "customer_visible";
-export type ServiceEventPaymentStatus = "unpaid" | "paid" | "partial";
+export type ServiceEventPaymentStatus = "unpaid" | "paid" | "partial" | "waived";
 
 export type ServiceEventEvidenceItem = {
   url?: string;
@@ -71,6 +71,8 @@ export type ServiceEvent = {
     version: 1;
     payment_status?: ServiceEventPaymentStatus;
     amount_collected?: number | null;
+    payment_method?: string;
+    payment_note?: string;
   };
 };
 
@@ -124,7 +126,7 @@ export function isNoteChannel(value: unknown): value is NoteChannel {
 export function isServiceEventPaymentStatus(
   value: unknown
 ): value is ServiceEventPaymentStatus {
-  return value === "unpaid" || value === "paid" || value === "partial";
+  return value === "unpaid" || value === "paid" || value === "partial" || value === "waived";
 }
 
 export function createServiceEvent(input: CreateServiceEventInput): ServiceEvent {
