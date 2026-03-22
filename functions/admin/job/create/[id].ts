@@ -93,7 +93,7 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       intake_id: intakeId,
       status: "queued",
       queued_at: now,
-      assigned_to: null,
+      assigned_to: "qtm-detailing",
       last_updated_at: now,
     };
 

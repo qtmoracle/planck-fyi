@@ -319,6 +319,10 @@ if (!operator) {
           throw new Error(data?.error || `job_load_failed_${res.status}`);
         }
 
+        if (data.job.state?.assigned_to !== operatorSlug) {
+          throw new Error("This job is assigned to a different operator.");
+        }
+
         return data.job;
       }
 
