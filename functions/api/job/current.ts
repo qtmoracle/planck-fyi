@@ -32,6 +32,8 @@ export const onRequestGet: PagesFunction = async (ctx) => {
     }
 
     // 2) List job state objects
+    const operatorSlug = String(request.headers.get("x-operator-slug") || "").trim();
+
     const listed = await bucket.list({ prefix: JOB_STATE_PREFIX, limit: 1000 });
     const keys: string[] = (listed?.objects || [])
       .map((o: any) => String(o?.key || ""))
@@ -45,6 +47,8 @@ export const onRequestGet: PagesFunction = async (ctx) => {
       if (!st) continue;
       const status = String(st?.status || "").toLowerCase();
       if (status !== "queued") continue;
+
+      if (operatorSlug && st?.assigned_to !== operatorSlug) continue;
 
       const t = Date.parse(String(st?.queued_at || st?.last_updated_at || ""));
       if (!Number.isFinite(t)) continue;
