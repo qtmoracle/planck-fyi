@@ -18,29 +18,79 @@ if (!operator) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{operator.name} — Dashboard</title>
   </head>
-  <body>
-    <main>
-      <h1>{operator.name} — Dashboard</h1>
+  <body class="bg-white text-black min-h-screen">
+    <main class="mx-auto max-w-2xl px-4 py-10 sm:px-6">
 
-      <section>
-        <h2>Active Job</h2>
-        <div id="active-job">Loading...</div>
-      </section>
+      <header class="mb-8">
+        <p class="text-xs uppercase tracking-widest text-black/30">Operator Dashboard</p>
+        <h1 class="mt-1 text-2xl font-semibold">{operator.name}</h1>
+        <p class="mt-1 text-sm text-black/50">{operator.regionName}</p>
+      </header>
 
-      <section>
-        <h2>Next Job</h2>
-        <div id="current-job">Loading...</div>
-      </section>
+      <div class="grid gap-5">
+
+        <!-- Token management -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">TECH Token</h2>
+          <div class="flex gap-2">
+            <input
+              id="dashboard-token-input"
+              type="password"
+              placeholder="Enter TECH token…"
+              class="flex-1 rounded-xl border border-black/20 px-3 py-2 text-sm font-mono"
+            />
+            <button
+              id="dashboard-token-save"
+              type="button"
+              class="rounded-xl border border-black px-4 py-2 text-sm"
+            >
+              Save
+            </button>
+          </div>
+          <p id="dashboard-token-status" class="mt-2 text-xs text-black/40"></p>
+        </div>
+
+        <!-- In Progress -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">In Progress</h2>
+          <div id="active-job" class="text-sm text-black/40">Checking…</div>
+        </div>
+
+        <!-- Ready to Claim -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">Ready to Claim</h2>
+          <div id="current-job" class="text-sm text-black/40">Checking…</div>
+        </div>
+
+        <!-- Completed Jobs -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <div class="flex items-baseline justify-between mb-4">
+            <h2 class="text-xs font-semibold uppercase tracking-widest text-black/30">Completed Jobs</h2>
+            <span id="completed-count" class="text-xs text-black/25"></span>
+          </div>
+          <div id="completed-jobs" class="text-sm text-black/40">Checking…</div>
+        </div>
+
+      </div>
     </main>
 
     <script define:vars={{ operatorSlug: operator.slug }}>
-      let techToken = "";
-      try { techToken = sessionStorage.getItem("planck.tech_token") || ""; } catch {}
-      const headers = {
-        accept: "application/json",
-        "x-operator-slug": operatorSlug,
-        "x-tech-token": techToken,
-      };
+      function getToken() {
+        try { return sessionStorage.getItem("planck.tech_token") || ""; } catch { return ""; }
+      }
+      function setToken(val) {
+        try { sessionStorage.setItem("planck.tech_token", val); } catch {}
+      }
+
+      let techToken = getToken();
+
+      function makeHeaders() {
+        return {
+          accept: "application/json",
+          "x-operator-slug": operatorSlug,
+          "x-tech-token": getToken(),
+        };
+      }
 
       function esc(value) {
         return String(value ?? "")
@@ -51,60 +101,102 @@ if (!operator) {
           .replaceAll("'", "&#039;");
       }
 
-      function jobCard(job, linkLabel, linkHref) {
+      // ── Token management ──────────────────────────────────────────────────────
+
+      const tokenInput = document.getElementById("dashboard-token-input");
+      const tokenSaveBtn = document.getElementById("dashboard-token-save");
+      const tokenStatusEl = document.getElementById("dashboard-token-status");
+
+      function updateTokenDisplay() {
+        const token = getToken();
+        if (tokenInput) tokenInput.value = token;
+        if (tokenStatusEl) {
+          tokenStatusEl.textContent = token
+            ? "Token active — job data will load with this token."
+            : "No token set — enter your TECH token above.";
+        }
+      }
+
+      tokenSaveBtn?.addEventListener("click", () => {
+        const val = String(tokenInput?.value || "").trim();
+        setToken(val);
+        techToken = val;
+        updateTokenDisplay();
+        // Reload job sections with new token
+        const activeEl = document.getElementById("active-job");
+        const currentEl = document.getElementById("current-job");
+        const completedEl = document.getElementById("completed-jobs");
+        if (activeEl) activeEl.textContent = "Checking…";
+        if (currentEl) currentEl.textContent = "Checking…";
+        if (completedEl) completedEl.textContent = "Checking…";
+        loadActive();
+        loadCurrent();
+        loadCompleted();
+      });
+
+      updateTokenDisplay();
+
+      // ── Job card helper ───────────────────────────────────────────────────────
+
+      function jobSummary(job) {
         const snap = job.packet?.intake_snapshot?.data || {};
         const contact = snap.contact || {};
         const asset = snap.asset || {};
         const request = snap.request || {};
-        const status = job.state?.status || "unknown";
         const customer = esc(contact.name || "—");
         const assetDesc = esc(asset.details || asset.class || "—");
         const tier = esc(request.tier || request.tier_id || "—");
-        return `<dl style="margin:0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:14px">
-          <dt style="color:#6b7280">Customer</dt><dd style="margin:0">${customer}</dd>
-          <dt style="color:#6b7280">Asset</dt><dd style="margin:0">${assetDesc}</dd>
-          <dt style="color:#6b7280">Tier</dt><dd style="margin:0">${tier}</dd>
-          <dt style="color:#6b7280">Status</dt><dd style="margin:0">${esc(status)}</dd>
-          <dt style="color:#6b7280">Job ID</dt><dd style="margin:0;font-size:12px;color:#9ca3af">${esc(job.job_id)}</dd>
-        </dl>
-        <p style="margin:12px 0 0"><a href="${esc(linkHref)}">${esc(linkLabel)} →</a></p>`;
+        const jobId = esc(job.job_id || "");
+        return `<div class="grid gap-1">
+          <p class="font-medium text-black">${customer}</p>
+          <p class="text-sm text-black/60">${assetDesc} · ${tier}</p>
+          <p class="mt-1 text-xs text-black/25 font-mono">${jobId}</p>
+        </div>`;
       }
+
+      // ── Loaders ───────────────────────────────────────────────────────────────
 
       async function loadActive() {
         const el = document.getElementById("active-job");
         try {
-          const res = await fetch("/api/job/active", { method: "GET", headers });
+          const res = await fetch("/api/job/active", { method: "GET", headers: makeHeaders() });
           const data = await res.json().catch(() => null);
           if (!data?.ok) {
-            el.textContent = "Error loading active job.";
+            el.textContent = "Could not load active job.";
             return;
           }
           if (data.job) {
             const href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}`;
-            el.innerHTML = jobCard(data.job, "Continue Active Job", href);
+            el.innerHTML = `${jobSummary(data.job)}
+              <p class="mt-4">
+                <a
+                  href="${esc(href)}"
+                  class="inline-block rounded-xl border border-black px-4 py-2 text-sm font-medium"
+                >
+                  Continue Job →
+                </a>
+              </p>`;
           } else {
-            el.textContent = "No active job.";
+            el.innerHTML = `<p class="text-black/30 italic text-sm">No active job.</p>`;
           }
         } catch {
-          el.textContent = "Error loading active job.";
+          el.textContent = "Error — check connection.";
         }
       }
 
       async function claimJob() {
-        let techToken = "";
-        try { techToken = sessionStorage.getItem("planck.tech_token") || ""; } catch {}
         const claimRes = await fetch("/api/job/claim", {
           method: "POST",
           headers: {
             accept: "application/json",
-            "x-tech-token": techToken,
+            "x-tech-token": getToken(),
             "x-operator-slug": operatorSlug,
           },
         });
         const claimData = await claimRes.json().catch(() => null);
         if (!claimRes.ok || !claimData?.ok || !claimData?.job) {
           const errEl = document.getElementById("claim-error");
-          if (errEl) errEl.textContent = "Claim failed: " + (claimData?.error || claimRes.status);
+          if (errEl) errEl.textContent = "Failed: " + (claimData?.error || claimRes.status);
           return;
         }
         window.location.href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(claimData.job.job_id)}`;
@@ -113,46 +205,133 @@ if (!operator) {
       async function loadCurrent() {
         const el = document.getElementById("current-job");
         try {
-          const res = await fetch("/api/job/current", { method: "GET", headers });
+          const res = await fetch("/api/job/current", { method: "GET", headers: makeHeaders() });
           const data = await res.json().catch(() => null);
           if (!data?.ok) {
-            el.textContent = "Error loading next job.";
+            el.textContent = "Could not load queue.";
             return;
           }
           if (data.job) {
-            const snap = data.job.packet?.intake_snapshot?.data || {};
-            const contact = snap.contact || {};
-            const asset = snap.asset || {};
-            const request = snap.request || {};
-            const status = data.job.state?.status || "unknown";
-            el.innerHTML = `<dl style="margin:0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:14px">
-              <dt style="color:#6b7280">Customer</dt><dd style="margin:0">${esc(contact.name || "—")}</dd>
-              <dt style="color:#6b7280">Asset</dt><dd style="margin:0">${esc(asset.details || asset.class || "—")}</dd>
-              <dt style="color:#6b7280">Tier</dt><dd style="margin:0">${esc(request.tier || request.tier_id || "—")}</dd>
-              <dt style="color:#6b7280">Status</dt><dd style="margin:0">${esc(status)}</dd>
-              <dt style="color:#6b7280">Job ID</dt><dd style="margin:0;font-size:12px;color:#9ca3af">${esc(data.job.job_id)}</dd>
-            </dl>
-            <p style="margin:12px 0 4px"><button id="claim-btn" style="cursor:pointer">Claim Job →</button></p>
-            <p id="claim-error" style="margin:0;color:#dc2626;font-size:13px"></p>`;
+            el.innerHTML = `${jobSummary(data.job)}
+              <div class="mt-4 flex items-center gap-3">
+                <button
+                  id="claim-btn"
+                  type="button"
+                  class="rounded-xl border border-black px-4 py-2 text-sm font-medium"
+                >
+                  Claim &amp; Start →
+                </button>
+                <span id="claim-error" class="text-sm text-red-600"></span>
+              </div>`;
             document.getElementById("claim-btn").addEventListener("click", () => {
               const btn = document.getElementById("claim-btn");
               btn.disabled = true;
               btn.textContent = "Claiming…";
               claimJob().catch(() => {
                 btn.disabled = false;
-                btn.textContent = "Claim Job →";
+                btn.textContent = "Claim & Start →";
               });
             });
           } else {
-            el.textContent = "No queued jobs.";
+            el.innerHTML = `<p class="text-black/30 italic text-sm">Queue is empty.</p>`;
           }
         } catch {
-          el.textContent = "Error loading next job.";
+          el.textContent = "Error — check connection.";
+        }
+      }
+
+      async function loadCompleted() {
+        const el = document.getElementById("completed-jobs");
+        const countEl = document.getElementById("completed-count");
+        try {
+          const res = await fetch("/api/job/completed", { method: "GET", headers: makeHeaders() });
+          const data = await res.json().catch(() => null);
+          if (!data?.ok) {
+            el.textContent = "Could not load completed jobs.";
+            return;
+          }
+          const jobs = data.jobs || [];
+          if (countEl) countEl.textContent = jobs.length ? `${jobs.length} job${jobs.length === 1 ? "" : "s"}` : "";
+          if (!jobs.length) {
+            el.innerHTML = `<p class="text-black/30 italic text-sm">No completed jobs yet.</p>`;
+            return;
+          }
+
+          function paymentBadge(status) {
+            const map = {
+              paid:    ["Paid",    "bg-green-50 text-green-700"],
+              partial: ["Partial", "bg-yellow-50 text-yellow-700"],
+              waived:  ["Waived",  "bg-blue-50 text-blue-600"],
+              unpaid:  ["Unpaid",  "bg-red-50 text-red-600"],
+            };
+            const [label, cls] = map[status] || ["—", "text-black/30"];
+            return `<span class="inline-block rounded-md px-2 py-0.5 text-xs font-medium ${cls}">${label}</span>`;
+          }
+
+          el.innerHTML = jobs.map((job) => {
+            const snap = job.packet?.intake_snapshot?.data || {};
+            const contact = snap.contact || {};
+            const asset = snap.asset || {};
+            const req = snap.request || {};
+            const se = job.service_event_summary || {};
+
+            const customer   = esc(contact.name || "—");
+            const assetDesc  = esc(asset.details || asset.class || "—");
+            const tier       = esc(se.tier || req.tier_id || req.tier || "—");
+            const area       = esc(req.service_area || se.surface || "—");
+            const photos     = Number(se.evidence_count) || 0;
+            const payStatus  = String(se.payment_status || "unpaid");
+            const amount     = typeof se.amount_collected === "number"
+              ? ` · $${se.amount_collected.toFixed(2)}`
+              : "";
+
+            const completedAt = job.state?.completed_at
+              ? new Date(job.state.completed_at).toLocaleString(undefined, {
+                  month: "short", day: "numeric", year: "numeric",
+                  hour: "numeric", minute: "2-digit",
+                })
+              : "—";
+
+            const href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(job.job_id)}`;
+
+            return `<div class="rounded-xl border border-black/8 p-4 grid gap-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="grid gap-0.5 min-w-0">
+                  <p class="font-semibold text-black leading-tight">${customer}</p>
+                  <p class="text-sm text-black/60">${assetDesc}</p>
+                </div>
+                <a
+                  href="${esc(href)}"
+                  class="shrink-0 rounded-lg border border-black/15 px-3 py-1 text-xs font-medium text-black/60 hover:text-black hover:border-black/40 transition-colors"
+                >View →</a>
+              </div>
+              <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-black/50">
+                <span>${tier}</span>
+                <span>${area}</span>
+              </div>
+              <div class="h-px bg-black/5"></div>
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-black/40">
+                <span>${esc(completedAt)}</span>
+                <span>${photos} photo${photos === 1 ? "" : "s"}</span>
+                <span>${paymentBadge(payStatus)}${esc(amount)}</span>
+              </div>
+            </div>`;
+          }).join("");
+        } catch {
+          el.textContent = "Error — check connection.";
         }
       }
 
       loadActive();
       loadCurrent();
+      loadCompleted();
+
+      // Auto-refresh every 20 seconds — no page reload needed during demo
+      setInterval(() => {
+        loadActive();
+        loadCurrent();
+        loadCompleted();
+      }, 20000);
     </script>
   </body>
 </html>
