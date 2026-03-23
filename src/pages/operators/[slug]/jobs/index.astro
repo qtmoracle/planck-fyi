@@ -623,7 +623,7 @@ if (!operator) {
 
       function buildCreatePayload(jobData) {
         const packet = jobData.packet || {};
-        const packetData = packet.data || {};
+        const packetData = packet.intake_snapshot?.data || packet.data || {};
         const request = packetData.request || {};
         const notes = packetData.notes || {};
 
