@@ -17,17 +17,22 @@ if (!operator) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{operator.name} — Job Surface</title>
+    <title>{operator.name} — Job</title>
   </head>
   <body class="bg-white text-black">
     <main class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <header class="mb-8">
-        <p class="text-xs tracking-wide text-black/60">operator execution surface</p>
-        <h1 class="mt-2 text-3xl font-semibold">{operator.name}</h1>
-        <p class="mt-2 text-sm text-black/70">
-          Region: {operator.regionName} · Surface: {operator.surface}
+        <a
+          href={`/operators/${operator.slug}/dashboard`}
+          class="text-xs text-black/40 hover:text-black/70 transition-colors"
+        >
+          ← Dashboard
+        </a>
+        <h1 class="mt-3 text-3xl font-semibold">{operator.name}</h1>
+        <p class="mt-1 text-sm text-black/50">
+          {operator.regionName}
         </p>
-        <p class="mt-1 text-sm text-black/70" id="job-id-display"></p>
+        <p class="mt-1 text-xs text-black/30 font-mono" id="job-id-display"></p>
       </header>
 
       <section class="grid gap-6">
@@ -64,7 +69,7 @@ if (!operator) {
         </div>
 
         <div class="rounded-2xl border border-black/10 p-5">
-          <h2 class="text-lg font-medium">ServiceEvent</h2>
+          <h2 class="text-lg font-medium">Service Status</h2>
           <div id="event-summary" class="mt-4 text-sm text-black/70">
             Waiting for job load...
           </div>
@@ -101,7 +106,8 @@ if (!operator) {
         <div class="rounded-2xl border border-black/10 p-5">
           <h2 class="text-lg font-medium">Before Photos</h2>
           <p id="before-evidence-count" class="mt-2 text-sm text-black/70">Load a job to enable photo capture.</p>
-          <div class="mt-4 flex flex-wrap items-center gap-3">
+          <div id="before-thumbs" class="mt-3 flex flex-wrap gap-2"></div>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
             <input id="before-file-input" type="file" accept="image/*" class="hidden" />
             <button
               id="before-capture-btn"
@@ -118,7 +124,8 @@ if (!operator) {
         <div class="rounded-2xl border border-black/10 p-5">
           <h2 class="text-lg font-medium">After Photos</h2>
           <p id="after-evidence-count" class="mt-2 text-sm text-black/70">Load a job to enable photo capture.</p>
-          <div class="mt-4 flex flex-wrap items-center gap-3">
+          <div id="after-thumbs" class="mt-3 flex flex-wrap gap-2"></div>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
             <input id="after-file-input" type="file" accept="image/*" class="hidden" />
             <button
               id="after-capture-btn"
@@ -243,8 +250,8 @@ if (!operator) {
       const jobId = new URLSearchParams(window.location.search).get("job") ?? "";
 
       const jobIdDisplay = document.getElementById("job-id-display");
-      if (jobIdDisplay) {
-        jobIdDisplay.textContent = jobId ? `Job ID: ${jobId}` : "No job ID in URL";
+      if (jobIdDisplay && jobId) {
+        jobIdDisplay.textContent = jobId;
       }
 
       const TECH_TOKEN_KEY = "planck.tech_token";
@@ -479,6 +486,49 @@ if (!operator) {
             row("Note", meta.payment_note),
           ])}
         </div>`;
+      }
+
+      async function renderThumbnails(stage) {
+        const containerId = stage === "before" ? "before-thumbs" : "after-thumbs";
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Merge persisted evidence keys with local session keys; dedup by key
+        const allKeys = new Set([
+          ...(serviceEvent?.evidence?.[stage] || []).map(i => i.key).filter(Boolean),
+          ...(localEvidence[stage] || []).map(i => i.key).filter(Boolean),
+        ]);
+
+        if (allKeys.size === 0) {
+          container.innerHTML = "";
+          return;
+        }
+
+        // Revoke existing blob URLs before clearing
+        container.querySelectorAll("img[data-blob]").forEach(img => {
+          URL.revokeObjectURL(img.src);
+        });
+        container.innerHTML = "";
+
+        const token = getTechToken();
+        for (const key of allKeys) {
+          try {
+            const res = await fetch(`/api/evidence?key=${encodeURIComponent(key)}`, {
+              headers: { "x-tech-token": token },
+            });
+            if (!res.ok) continue;
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const img = document.createElement("img");
+            img.src = blobUrl;
+            img.dataset.blob = "1";
+            img.alt = stage === "before" ? "Before" : "After";
+            img.className = "h-24 w-24 rounded-xl object-cover border border-black/10";
+            container.appendChild(img);
+          } catch {
+            // skip — don't block other thumbnails
+          }
+        }
       }
 
       function renderEvidence(stage) {
@@ -754,6 +804,8 @@ if (!operator) {
           if (afterCaptureBtn) afterCaptureBtn.disabled = false;
           renderEvidence("before");
           renderEvidence("after");
+          renderThumbnails("before");
+          renderThumbnails("after");
 
           if (payStatusInput) payStatusInput.disabled = false;
           if (payAmountInput) payAmountInput.disabled = false;
@@ -895,7 +947,8 @@ if (!operator) {
           item = await uploadPhoto(file, "before");
           renderEvidence("before");
           if (beforeUploadStatus) beforeUploadStatus.textContent = "Saving…";
-          await persistEvidence(serviceEvent.id, "before", item);
+          serviceEvent = await persistEvidence(serviceEvent.id, "before", item);
+          await renderThumbnails("before");
           if (beforeUploadStatus) beforeUploadStatus.textContent = "Saved.";
         } catch (err) {
           const msg = err instanceof Error ? err.message : "upload_error";
@@ -916,7 +969,8 @@ if (!operator) {
           item = await uploadPhoto(file, "after");
           renderEvidence("after");
           if (afterUploadStatus) afterUploadStatus.textContent = "Saving…";
-          await persistEvidence(serviceEvent.id, "after", item);
+          serviceEvent = await persistEvidence(serviceEvent.id, "after", item);
+          await renderThumbnails("after");
           if (afterUploadStatus) afterUploadStatus.textContent = "Saved.";
         } catch (err) {
           const msg = err instanceof Error ? err.message : "upload_error";

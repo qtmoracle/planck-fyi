@@ -84,11 +84,12 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     }
 
     // 4) Mutate JOB_STATE_v0.01 -> active (single-tech)
+    const operatorSlug = String(request.headers.get("x-operator-slug") || "").trim();
     const now = new Date().toISOString();
     const nextState = {
       ...currentState,
       status: "active",
-      assigned_to: "tech_001",
+      assigned_to: operatorSlug || currentState.assigned_to || "tech_001",
       claimed_at: now,
       last_updated_at: now,
     };
