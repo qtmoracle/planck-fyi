@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { operators } from "../data/operators";
+import { surfaces } from "../data/surfaces";
 ---
 
 <BaseLayout title="Planck Service Router">
@@ -48,20 +49,22 @@ import { operators } from "../data/operators";
         </p>
 
         <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <a
-            href="/surfaces/auto-detailing"
-            class="border border-border p-6 hover:border-accent transition-colors"
-          >
-            <p class="text-lg font-medium">auto detailing</p>
+          {surfaces.map((surface) => (
+            <a
+              href={`/surfaces/${surface.slug}`}
+              class="border border-border p-6 hover:border-accent transition-colors"
+            >
+              <p class="text-lg font-medium">{surface.name.toLowerCase()}</p>
 
-            <p class="mt-2 text-sm text-text/70">
-              structured vehicle surface protocols
-            </p>
+              <p class="mt-2 text-sm text-text/70">
+                {surface.description}
+              </p>
 
-            <p class="mt-6 text-sm text-accent">
-              view surface →
-            </p>
-          </a>
+              <p class="mt-6 text-sm text-accent">
+                view surface →
+              </p>
+            </a>
+          ))}
         </div>
       </section>
 
@@ -83,7 +86,7 @@ import { operators } from "../data/operators";
 
           <div class="border border-border p-4">
             <p class="text-xs tracking-wide text-text/70">surfaces</p>
-            <p class="mt-2 text-lg">1</p>
+            <p class="mt-2 text-lg">{surfaces.length}</p>
           </div>
 
           <div class="border border-border p-4">

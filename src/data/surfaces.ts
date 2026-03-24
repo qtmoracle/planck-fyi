@@ -15,6 +15,11 @@ export const surfaces: Surface[] = [
     name: "Astrology",
     description: "Interpretive analysis surfaces for personal and decision intelligence.",
   },
+  {
+    slug: "landscaping",
+    name: "Landscaping",
+    description: "On-site property maintenance execution with structured job tracking and evidence capture.",
+  },
 ];
 
 export const surfaceMap: Record<string, Surface> = Object.fromEntries(

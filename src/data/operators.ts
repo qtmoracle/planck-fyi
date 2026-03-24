@@ -50,6 +50,23 @@ export const operators: Operator[] = [
 
     template: "v1",
     bookingHref: "#request-session"
+  },
+  {
+    slug: "qtm-landscaping",
+    name: "QTM Landscaping",
+    logo: "/brand/planck-wordmark.png",
+
+    country: "us",
+    state: "fl",
+    city: "miami",
+
+    regionName: "Miami Dade County",
+
+    surface: "landscaping",
+    tagline: "Structured execution for properties that deserve consistent care.",
+
+    template: "v1",
+    bookingHref: "#request"
   }
 ];
 

@@ -53,6 +53,24 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <button
                 type="button"
                 class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
+                data-route="/surfaces/landscaping"
+              >
+                <span class="block text-sm text-text">landscaping</span>
+                <span class="mt-1 block text-xs text-muted">surface</span>
+              </button>
+
+              <button
+                type="button"
+                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
+                data-route="/surfaces/astrology"
+              >
+                <span class="block text-sm text-text">astrology</span>
+                <span class="mt-1 block text-xs text-muted">surface</span>
+              </button>
+
+              <button
+                type="button"
+                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
                 data-route="/us/fl/miami/auto-detailing"
               >
                 <span class="block text-sm text-text">miami</span>
@@ -70,17 +88,26 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
               <button
                 type="button"
-                class="block w-full px-4 py-4 text-left hover:bg-white/5 transition-colors"
+                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
                 data-route="/operators/qtm-astrology"
               >
                 <span class="block text-sm text-text">qtm astrology</span>
+                <span class="mt-1 block text-xs text-muted">operator</span>
+              </button>
+
+              <button
+                type="button"
+                class="block w-full px-4 py-4 text-left hover:bg-white/5 transition-colors"
+                data-route="/operators/qtm-landscaping"
+              >
+                <span class="block text-sm text-text">qtm landscaping</span>
                 <span class="mt-1 block text-xs text-muted">operator</span>
               </button>
             </div>
           </div>
 
           <p class="mt-3 text-xs text-muted">
-            try: auto detailing · miami · qtm detailing · qtm astrology
+            try: auto detailing · landscaping · qtm detailing · qtm landscaping
           </p>
         </div>
 
@@ -93,6 +120,12 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
           <a href="/surfaces/auto-detailing" class="hover:text-text transition-colors">
             Auto Detailing
+          </a>
+
+          <span class="text-border">·</span>
+
+          <a href="/surfaces/landscaping" class="hover:text-text transition-colors">
+            Landscaping
           </a>
 
           <span class="text-border">·</span>
@@ -125,6 +158,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           route: "/surfaces/auto-detailing",
         },
         {
+          terms: ["landscaping", "landscape", "lawn"],
+          route: "/surfaces/landscaping",
+        },
+        {
           terms: ["miami", "miami auto detailing"],
           route: "/us/fl/miami/auto-detailing",
         },
@@ -133,8 +170,16 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           route: "/operators/qtm-detailing",
         },
         {
-          terms: ["qtm astrology", "astrology"],
+          terms: ["astrology", "astrology surface"],
+          route: "/surfaces/astrology",
+        },
+        {
+          terms: ["qtm astrology", "astrology operator"],
           route: "/operators/qtm-astrology",
+        },
+        {
+          terms: ["qtm landscaping"],
+          route: "/operators/qtm-landscaping",
         },
       ];
 
