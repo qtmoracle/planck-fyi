@@ -1,5 +1,36 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { surfaces } from "../data/surfaces";
+import { operators } from "../data/operators";
+
+const liveSurfaces = surfaces.filter((s) => s.status === "live");
+
+interface RouteEntry {
+  label: string;
+  kind: string;
+  route: string;
+  terms: string[];
+}
+
+const routeEntries: RouteEntry[] = [
+  ...liveSurfaces.map((s) => ({
+    label: s.name.toLowerCase(),
+    kind: "surface",
+    route: `/surfaces/${s.slug}`,
+    terms: [s.name.toLowerCase(), s.slug.replace(/-/g, " "), s.slug],
+  })),
+  ...operators.map((o) => ({
+    label: o.name.toLowerCase(),
+    kind: "operator",
+    route: `/operators/${o.slug}`,
+    terms: [o.name.toLowerCase(), o.slug.replace(/-/g, " "), o.slug],
+  })),
+];
+
+const hintTerms = [
+  ...liveSurfaces.slice(0, 2).map((s) => s.name.toLowerCase()),
+  ...operators.slice(0, 2).map((o) => o.name.toLowerCase()),
+].join(" · ");
 ---
 
 <BaseLayout title="Planck Service Router">
@@ -15,7 +46,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         </h1>
 
         <div class="mt-10 mx-auto max-w-3xl border border-border bg-bg/60 p-3 sm:p-4">
-          <div class="relative" data-router-search>
+          <div
+            class="relative"
+            data-router-search
+            data-routes={JSON.stringify(routeEntries)}
+          >
             <div class="flex flex-col sm:flex-row gap-3">
               <input
                 type="text"
@@ -41,73 +76,21 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               class="absolute left-0 right-0 top-full z-20 mt-3 hidden border border-border bg-bg/95 text-left shadow-lg shadow-black/10 backdrop-blur"
               data-search-dropdown
             >
-              <button
-                type="button"
-                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
-                data-route="/surfaces/auto-detailing"
-              >
-                <span class="block text-sm text-text">auto detailing</span>
-                <span class="mt-1 block text-xs text-muted">surface</span>
-              </button>
-
-              <button
-                type="button"
-                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
-                data-route="/surfaces/landscaping"
-              >
-                <span class="block text-sm text-text">landscaping</span>
-                <span class="mt-1 block text-xs text-muted">surface</span>
-              </button>
-
-              <button
-                type="button"
-                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
-                data-route="/surfaces/astrology"
-              >
-                <span class="block text-sm text-text">astrology</span>
-                <span class="mt-1 block text-xs text-muted">surface</span>
-              </button>
-
-              <button
-                type="button"
-                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
-                data-route="/us/fl/miami/auto-detailing"
-              >
-                <span class="block text-sm text-text">miami</span>
-                <span class="mt-1 block text-xs text-muted">regional route</span>
-              </button>
-
-              <button
-                type="button"
-                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
-                data-route="/operators/qtm-detailing"
-              >
-                <span class="block text-sm text-text">qtm detailing</span>
-                <span class="mt-1 block text-xs text-muted">operator</span>
-              </button>
-
-              <button
-                type="button"
-                class="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5 transition-colors"
-                data-route="/operators/qtm-astrology"
-              >
-                <span class="block text-sm text-text">qtm astrology</span>
-                <span class="mt-1 block text-xs text-muted">operator</span>
-              </button>
-
-              <button
-                type="button"
-                class="block w-full px-4 py-4 text-left hover:bg-white/5 transition-colors"
-                data-route="/operators/qtm-landscaping"
-              >
-                <span class="block text-sm text-text">qtm landscaping</span>
-                <span class="mt-1 block text-xs text-muted">operator</span>
-              </button>
+              {routeEntries.map((entry, index) => (
+                <button
+                  type="button"
+                  class={`block w-full px-4 py-4 text-left hover:bg-white/5 transition-colors${index < routeEntries.length - 1 ? " border-b border-border" : ""}`}
+                  data-route={entry.route}
+                >
+                  <span class="block text-sm text-text">{entry.label}</span>
+                  <span class="mt-1 block text-xs text-muted">{entry.kind}</span>
+                </button>
+              ))}
             </div>
           </div>
 
           <p class="mt-3 text-xs text-muted">
-            try: auto detailing · landscaping · qtm detailing · qtm landscaping
+            try: {hintTerms}
           </p>
         </div>
 
@@ -116,23 +99,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             Operators
           </a>
 
-          <span class="text-border">·</span>
-
-          <a href="/surfaces/auto-detailing" class="hover:text-text transition-colors">
-            Auto Detailing
-          </a>
-
-          <span class="text-border">·</span>
-
-          <a href="/surfaces/landscaping" class="hover:text-text transition-colors">
-            Landscaping
-          </a>
-
-          <span class="text-border">·</span>
-
-          <a href="/us/fl/miami/auto-detailing" class="hover:text-text transition-colors">
-            Miami
-          </a>
+          {liveSurfaces.map((surface, index) => (
+            <>
+              <span class="text-border">·</span>
+              <a href={`/surfaces/${surface.slug}`} class="hover:text-text transition-colors">
+                {surface.name}
+              </a>
+            </>
+          ))}
         </div>
       </section>
     </div>
@@ -152,36 +126,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         return;
       }
 
-      const routes = [
-        {
-          terms: ["auto detailing", "detailing", "auto"],
-          route: "/surfaces/auto-detailing",
-        },
-        {
-          terms: ["landscaping", "landscape", "lawn"],
-          route: "/surfaces/landscaping",
-        },
-        {
-          terms: ["miami", "miami auto detailing"],
-          route: "/us/fl/miami/auto-detailing",
-        },
-        {
-          terms: ["qtm detailing", "qtm", "operator"],
-          route: "/operators/qtm-detailing",
-        },
-        {
-          terms: ["astrology", "astrology surface"],
-          route: "/surfaces/astrology",
-        },
-        {
-          terms: ["qtm astrology", "astrology operator"],
-          route: "/operators/qtm-astrology",
-        },
-        {
-          terms: ["qtm landscaping"],
-          route: "/operators/qtm-landscaping",
-        },
-      ];
+      const routeData = root.getAttribute("data-routes");
+      const routes = routeData ? JSON.parse(routeData) : [];
 
       let activeIndex = -1;
       let visibleItems = [];

@@ -2,6 +2,8 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { operators } from "../data/operators";
 import { surfaces } from "../data/surfaces";
+
+const liveSurfaces = surfaces.filter((s) => s.status === "live");
 ---
 
 <BaseLayout title="Planck Service Router">
@@ -49,7 +51,7 @@ import { surfaces } from "../data/surfaces";
         </p>
 
         <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {surfaces.map((surface) => (
+          {liveSurfaces.map((surface) => (
             <a
               href={`/surfaces/${surface.slug}`}
               class="border border-border p-6 hover:border-accent transition-colors"
@@ -86,7 +88,7 @@ import { surfaces } from "../data/surfaces";
 
           <div class="border border-border p-4">
             <p class="text-xs tracking-wide text-text/70">surfaces</p>
-            <p class="mt-2 text-lg">{surfaces.length}</p>
+            <p class="mt-2 text-lg">{liveSurfaces.length}</p>
           </div>
 
           <div class="border border-border p-4">

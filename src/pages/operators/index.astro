@@ -1,6 +1,9 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { operators } from "../../data/operators";
+import { surfaces } from "../../data/surfaces";
+
+const plannedSurfaces = surfaces.filter((s) => s.status === "planned");
 ---
 
 <BaseLayout title="Planck Network Operators">
@@ -63,7 +66,7 @@ import { operators } from "../../data/operators";
                   future lanes
                 </p>
                 <p class="mt-2 text-lg font-medium">
-                  1
+                  {plannedSurfaces.length}
                 </p>
               </div>
             </div>
@@ -224,47 +227,49 @@ import { operators } from "../../data/operators";
         </div>
 
         <div class="mt-10 grid gap-6 lg:grid-cols-2">
-          <div class="relative overflow-hidden border border-border bg-bg/60 p-6 opacity-90">
-            <div class="pointer-events-none absolute inset-0">
-              <div class="absolute left-0 top-0 h-1 w-full bg-accent/35"></div>
-              <div class="absolute -right-6 bottom-0 h-20 w-20 rounded-full bg-accent/10 blur-2xl"></div>
-            </div>
-
-            <div class="relative">
-              <div class="mb-5 overflow-hidden rounded border border-border/70">
-                <img
-                  src="/images/surfaces/pressure-cleaning.svg"
-                  alt="Pressure cleaning surface"
-                  class="h-44 w-full object-cover"
-                  loading="lazy"
-                />
+          {plannedSurfaces.map((surface) => (
+            <div class="relative overflow-hidden border border-border bg-bg/60 p-6 opacity-90">
+              <div class="pointer-events-none absolute inset-0">
+                <div class="absolute left-0 top-0 h-1 w-full bg-accent/35"></div>
+                <div class="absolute -right-6 bottom-0 h-20 w-20 rounded-full bg-accent/10 blur-2xl"></div>
               </div>
 
-              <div class="flex items-center justify-between gap-4">
-                <p class="text-lg font-medium text-text">
-                  pressure cleaning
+              <div class="relative">
+                <div class="mb-5 overflow-hidden rounded border border-border/70">
+                  <img
+                    src={surface.image}
+                    alt={`${surface.name} surface`}
+                    class="h-44 w-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+
+                <div class="flex items-center justify-between gap-4">
+                  <p class="text-lg font-medium text-text">
+                    {surface.name.toLowerCase()}
+                  </p>
+
+                  <span class="text-xs uppercase tracking-wide text-text/50">
+                    planned
+                  </span>
+                </div>
+
+                <p class="mt-4 text-sm text-muted leading-relaxed">
+                  {surface.description}
                 </p>
 
-                <span class="text-xs uppercase tracking-wide text-text/50">
-                  planned
-                </span>
-              </div>
+                <div class="mt-6 flex items-center justify-between">
+                  <span class="border border-border/70 px-3 py-1 text-[11px] uppercase tracking-wide text-text/60">
+                    future surface
+                  </span>
 
-              <p class="mt-4 text-sm text-muted leading-relaxed">
-                future operator lane for exterior surface cleaning and property care.
-              </p>
-
-              <div class="mt-6 flex items-center justify-between">
-                <span class="border border-border/70 px-3 py-1 text-[11px] uppercase tracking-wide text-text/60">
-                  future surface
-                </span>
-
-                <span class="text-sm text-muted">
-                  coming soon
-                </span>
+                  <span class="text-sm text-muted">
+                    coming soon
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
       </section>
     </div>

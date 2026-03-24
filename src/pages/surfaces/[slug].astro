@@ -4,9 +4,11 @@ import { surfaces, getSurfaceBySlug } from "../../data/surfaces";
 import { operators } from "../../data/operators";
 
 export function getStaticPaths() {
-  return surfaces.map((surface) => ({
-    params: { slug: surface.slug },
-  }));
+  return surfaces
+    .filter((surface) => surface.status === "live")
+    .map((surface) => ({
+      params: { slug: surface.slug },
+    }));
 }
 
 const { slug } = Astro.params;
@@ -21,15 +23,7 @@ const surfaceOperators = operators.filter(
   (operator) => operator.surface === surface.slug
 );
 
-const surfaceImageMap: Record<string, string> = {
-  "auto-detailing": "/images/surfaces/auto-detailing.svg",
-  astrology: "/images/surfaces/astrology.svg",
-  landscaping: "/images/surfaces/landscaping.svg",
-  "pressure-cleaning": "/images/surfaces/pressure-cleaning.svg",
-};
-
-const surfaceImage =
-  surfaceImageMap[surface.slug] ?? "/images/network-surface.svg";
+const surfaceImage = surface.image;
 
 const operatorImageMap: Record<string, string> = {
   "qtm-detailing": "/images/banner-qtm.jpg",
