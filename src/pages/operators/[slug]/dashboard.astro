@@ -64,6 +64,12 @@ if (!operator) {
           <div id="completed-jobs" class="text-sm text-black/40">Checking…</div>
         </div>
 
+        <!-- Operations Summary -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-4">Operations Summary</p>
+          <div id="ops-summary" class="text-sm text-black/40">Loading…</div>
+        </div>
+
         <!-- Revenue Snapshot -->
         <div class="rounded-2xl border border-black/10 p-5">
           <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-4">Revenue Snapshot</p>
@@ -493,11 +499,13 @@ if (!operator) {
           // amount_collected is null when no ServiceEvent exists — only non-null values
           // are summed, so totals reflect recorded payments only.
           renderRevenueSnapshot(jobs);
+          return jobs;
 
         } catch {
           if (el) el.textContent = "Error — check connection.";
           const rev = document.getElementById("revenue-snapshot");
           if (rev) rev.textContent = "Could not load revenue data.";
+          return [];
         }
       }
 
@@ -934,12 +942,51 @@ if (!operator) {
       // ── Boot ─────────────────────────────────────────────────────────────────
 
       async function reload() {
-        const [activeJob, queuedJob] = await Promise.all([loadActive(), loadCurrent()]);
-        loadCompleted();
+        const [activeJob, queuedJob, completedJobs] = await Promise.all([loadActive(), loadCurrent(), loadCompleted()]);
+        renderOpsSummary(activeJob, queuedJob, completedJobs);
         const step   = resolveLifecycleStep(activeJob, queuedJob);
         const action = resolveNextAction(activeJob, queuedJob);
         renderLifecycleRail(step);
         renderNextAction(action);
+      }
+
+      function renderOpsSummary(activeJob, queuedJob, completedJobs) {
+        const el = document.getElementById("ops-summary");
+        if (!el) return;
+
+        const activeCount  = activeJob ? 1 : 0;
+        const queuedCount  = queuedJob ? 1 : 0;
+        const completed    = Array.isArray(completedJobs) ? completedJobs : [];
+
+        // Completed today — compare completed_at date to today's local date
+        const todayStr = new Date().toLocaleDateString();
+        const completedToday = completed.filter(j => {
+          const d = j.state?.completed_at;
+          return d && new Date(d).toLocaleDateString() === todayStr;
+        }).length;
+        const completedDisplay = completedToday > 0
+          ? `${completedToday} today (${completed.length} total)`
+          : String(completed.length);
+
+        // Needs attention: unpaid completed jobs
+        const unpaid = completed.filter(j => {
+          const s = String(j.service_event_summary?.payment_status || "");
+          return s === "unpaid" || s === "";
+        }).length;
+        const attentionCount = unpaid;
+        const attentionColor = attentionCount > 0 ? "color:rgb(239 68 68)" : "";
+
+        const row = (label, value, style = "") =>
+          `<div class="flex justify-between py-1.5 border-b border-black/5 last:border-0">
+            <span class="text-black/40">${label}</span>
+            <span class="font-medium text-black" style="${style}">${value}</span>
+          </div>`;
+
+        el.innerHTML =
+          row("Active Jobs",           activeCount)  +
+          row("Queued / Unclaimed",    queuedCount)  +
+          row("Needs Attention",       attentionCount, attentionColor) +
+          row("Completed",             completedDisplay);
       }
 
       reload();
