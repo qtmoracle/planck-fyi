@@ -54,12 +54,16 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     }
 
     // Photo minimum checks (2 exterior + 2 interior)
+    // Skipped for event-coordination surface — venue photos are optional for that surface
+    const surfaceSlug = String(packet?.source?.surface_slug || "").trim();
+    const photoCheckRequired = surfaceSlug !== "event-coordination";
+
     const items = Array.isArray(packet?.photos?.items) ? packet.photos.items : [];
     const exterior = items.filter((x: any) => x?.category === "exterior");
     const interior = items.filter((x: any) => x?.category === "interior");
 
-    if (exterior.length < 2) return json({ ok: false, error: "missing_photos_exterior" }, 400);
-    if (interior.length < 2) return json({ ok: false, error: "missing_photos_interior" }, 400);
+    if (photoCheckRequired && exterior.length < 2) return json({ ok: false, error: "missing_photos_exterior" }, 400);
+    if (photoCheckRequired && interior.length < 2) return json({ ok: false, error: "missing_photos_interior" }, 400);
 
     // Write canonical packet (system of record)
     const packetKey = `planck/intake_packets/INTAKE_PACKET_v0.01/${id}.json`;
@@ -89,11 +93,76 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       if (!resp.ok) return json({ ok: false, error: "email_send_failed" }, 500);
     }
 
+    // Notify Omni (best-effort, non-blocking — must never affect submit outcome)
+    notifyOmni(ctx, request, env, packet);
+
+    // Tap agent router (best-effort, log-only — must never affect submit outcome)
+    tapAgentRouter(ctx, request, env, packet);
+
     return json({ ok: true, received: true, id, email_sent: emailEnabled }, 200);
   } catch {
     return json({ ok: false, error: "server_error" }, 500);
   }
 };
+
+function notifyOmni(ctx: EventContext<any, any, any>, request: Request, env: any, packet: any) {
+  const agentToken = String(env?.AGENT_TOKEN || "");
+  if (!agentToken) return; // AGENT_TOKEN not configured — skip silently
+
+  const origin = new URL(request.url).origin;
+  ctx.waitUntil(
+    fetch(`${origin}/api/omni/ingest`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-agent-token": agentToken,
+      },
+      body: JSON.stringify({ type: "intake_created", payload: packet }),
+    }).catch(() => {}) // omni failure must never surface to the caller
+  );
+}
+
+function tapAgentRouter(ctx: EventContext<any, any, any>, request: Request, env: any, packet: any) {
+  const agentToken = String(env?.AGENT_TOKEN || "");
+  if (!agentToken) return; // AGENT_TOKEN not configured — skip silently
+
+  const origin = new URL(request.url).origin;
+  ctx.waitUntil(
+    fetch(`${origin}/api/agents/route`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-agent-token": agentToken,
+      },
+      body: JSON.stringify({ type: "intake_created", payload: packet }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        console.log("[agent-routing] intake_created →", JSON.stringify(data?.routing_plan ?? data));
+
+        // Persist routing result as append-only activity log (best-effort)
+        ctx.waitUntil(
+          fetch(`${origin}/api/agents/log`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-agent-token": agentToken,
+            },
+            body: JSON.stringify({
+              event_type:     "intake_created",
+              routing_result: data,
+              source:         "submit",
+            }),
+          }).catch((err) => {
+            console.log("[agent-log] persist failed:", String(err?.message || err));
+          })
+        );
+      })
+      .catch((err) => {
+        console.log("[agent-routing] tap failed:", String(err?.message || err));
+      })
+  );
+}
 
 function buildEmailText(packet: any, packetKey: string) {
   const c = packet.data.contact;
