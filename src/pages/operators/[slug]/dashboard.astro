@@ -64,6 +64,12 @@ if (!operator) {
           <div id="completed-jobs" class="text-sm text-black/40">Checking…</div>
         </div>
 
+        <!-- Revenue Snapshot -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-4">Revenue Snapshot</p>
+          <div id="revenue-snapshot" class="text-sm text-black/40">Loading…</div>
+        </div>
+
         <!-- --- OMNI SECTION START --- -->
         <div class="rounded-2xl border border-black/10 p-5">
           <div class="flex items-baseline justify-between mb-4">
@@ -77,13 +83,30 @@ if (!operator) {
               placeholder="Intake ID…"
               class="flex-1 rounded-xl border border-black/20 px-3 py-2 text-xs font-mono"
             />
+            <button
+              id="omni-fetch-btn"
+              type="button"
+              class="rounded-xl border border-black/20 px-3 py-2 text-xs text-black/60 hover:border-black/40 hover:text-black transition-colors whitespace-nowrap"
+            >Get Suggestions</button>
           </div>
           <div id="omni-suggestions-list" class="grid gap-2">
             <!-- rendered by JS -->
           </div>
+          <div id="omni-flags-list" class="mt-2 grid gap-1">
+            <!-- flags rendered by JS -->
+          </div>
           <p id="omni-status" class="mt-3 text-xs text-black/40 min-h-[1em]"></p>
         </div>
         <!-- --- OMNI SECTION END --- -->
+
+        <!-- --- OMNI ACTIVITY START --- -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-4">Recent Omni Activity</p>
+          <div id="omni-activity-list" class="grid gap-1.5">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+        <!-- --- OMNI ACTIVITY END --- -->
 
         <!-- Token -->
         <div class="rounded-2xl border border-black/10 p-5">
@@ -464,9 +487,69 @@ if (!operator) {
               </div>
             </div>`;
           }).join("");
+
+          // ── Revenue Snapshot ──────────────────────────────────────────────────
+          // Derived entirely from the jobs array already loaded above.
+          // amount_collected is null when no ServiceEvent exists — only non-null values
+          // are summed, so totals reflect recorded payments only.
+          renderRevenueSnapshot(jobs);
+
         } catch {
           if (el) el.textContent = "Error — check connection.";
+          const rev = document.getElementById("revenue-snapshot");
+          if (rev) rev.textContent = "Could not load revenue data.";
         }
+      }
+
+      function renderRevenueSnapshot(jobs) {
+        const el = document.getElementById("revenue-snapshot");
+        if (!el) return;
+
+        const total     = jobs.length;
+        const paid      = jobs.filter(j => ["paid","partial","waived"].includes(String(j.service_event_summary?.payment_status || "")));
+        const unpaid    = jobs.filter(j => {
+          const s = String(j.service_event_summary?.payment_status || "");
+          return s === "unpaid" || s === "";
+        });
+        const withAmount = jobs.filter(j => typeof j.service_event_summary?.amount_collected === "number");
+        const totalCollected = withAmount.reduce((sum, j) => sum + j.service_event_summary.amount_collected, 0);
+        const avgCollected   = withAmount.length > 0 ? totalCollected / withAmount.length : null;
+
+        if (total === 0) {
+          el.innerHTML = `<p class="text-black/30 italic">No completed jobs yet.</p>`;
+          return;
+        }
+
+        const fmt = (n) => `$${n.toFixed(2)}`;
+        const note = withAmount.length < total
+          ? `<p class="mt-3 text-xs text-black/25">Amount reflects ${withAmount.length} of ${total} job${total === 1 ? "" : "s"} with recorded payment.</p>`
+          : "";
+
+        el.innerHTML = `
+          <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+            <div>
+              <p class="text-xs text-black/30 mb-0.5">Completed</p>
+              <p class="text-lg font-semibold text-black">${total}</p>
+            </div>
+            <div>
+              <p class="text-xs text-black/30 mb-0.5">Paid / Settled</p>
+              <p class="text-lg font-semibold text-black">${paid.length}</p>
+            </div>
+            <div>
+              <p class="text-xs text-black/30 mb-0.5">Unpaid</p>
+              <p class="text-lg font-semibold ${unpaid.length > 0 ? "text-red-500" : "text-black"}">${unpaid.length}</p>
+            </div>
+            <div>
+              <p class="text-xs text-black/30 mb-0.5">Total Collected</p>
+              <p class="text-lg font-semibold text-black">${withAmount.length > 0 ? fmt(totalCollected) : "—"}</p>
+            </div>
+            <div>
+              <p class="text-xs text-black/30 mb-0.5">Avg per Job</p>
+              <p class="text-lg font-semibold text-black">${avgCollected !== null ? fmt(avgCollected) : "—"}</p>
+            </div>
+          </div>
+          ${note}
+        `;
       }
 
       // ── Omni ─────────────────────────────────────────────────────────────────
@@ -504,18 +587,36 @@ if (!operator) {
         });
       }
 
-      async function handleOmniAction(type) {
-        const statusEl  = document.getElementById("omni-status");
-        const intakeId  = String(document.getElementById("omni-intake-id")?.value || "").trim();
+      async function handleOmniAction(type, triggerBtn) {
+        const statusEl   = document.getElementById("omni-status");
+        const intakeId   = String(document.getElementById("omni-intake-id")?.value || "").trim();
         const agentToken = getAgentToken();
 
         function setStatus(msg) {
           if (statusEl) statusEl.textContent = msg;
         }
 
+        function setBusy(busy) {
+          if (!triggerBtn) return;
+          triggerBtn.disabled = busy;
+          triggerBtn.style.opacity = busy ? "0.5" : "";
+        }
+
+        function markDone(label) {
+          if (!triggerBtn) return;
+          triggerBtn.disabled = true;
+          triggerBtn.style.opacity = "0.4";
+          // replace inner text while preserving the priority badge span
+          const badge = triggerBtn.querySelector("span");
+          triggerBtn.textContent = "";
+          if (badge) triggerBtn.appendChild(badge);
+          triggerBtn.append(label);
+        }
+
         if (type === "approve_intake") {
           if (!intakeId) { setStatus("Enter an Intake ID first."); return; }
-          setStatus("Approving…");
+          setStatus("Approving intake…");
+          setBusy(true);
           try {
             const res  = await fetch("/api/agent/intake/queue", {
               method: "POST",
@@ -524,12 +625,22 @@ if (!operator) {
             });
             const data = await res.json().catch(() => null);
             console.log("[omni] approve_intake", res.status, data);
-            setStatus(res.ok
-              ? `Approved: ${intakeId}${data?.note === "already_approved" ? " (already approved)" : ""}`
-              : `Failed: ${esc(data?.error || String(res.status))}`);
+            if (res.ok) {
+              const alreadyDone = data?.note === "already_approved";
+              setStatus(alreadyDone ? `Intake already approved: ${intakeId}` : `Intake approved.`);
+              markDone(alreadyDone ? "Already Approved" : "Approved");
+              appendOmniLog({ intakeId, event: "approve_intake", message: `Intake approved: ${intakeId}`, status: "success" });
+            } else {
+              const errMsg = data?.error || String(res.status);
+              setStatus(`Action failed — ${esc(errMsg)}`);
+              setBusy(false);
+              appendOmniLog({ intakeId, event: "action_failed", message: `approve_intake failed: ${errMsg}`, status: "error" });
+            }
           } catch (err) {
             console.log("[omni] approve_intake error", err);
-            setStatus("Error — see console.");
+            setStatus("Action failed — see console.");
+            setBusy(false);
+            appendOmniLog({ intakeId, event: "action_failed", message: "approve_intake error — see console", status: "error" });
           }
           return;
         }
@@ -537,6 +648,7 @@ if (!operator) {
         if (type === "create_job") {
           if (!intakeId) { setStatus("Enter an Intake ID first."); return; }
           setStatus("Creating job…");
+          setBusy(true);
           try {
             const res  = await fetch(`/api/agent/job/create/${encodeURIComponent(intakeId)}`, {
               method: "POST",
@@ -547,28 +659,275 @@ if (!operator) {
             console.log("[omni] create_job", res.status, data);
             if (res.ok) {
               setStatus(`Job created: ${esc(data?.job_id || intakeId)}`);
+              markDone("Created");
+              appendOmniLog({ intakeId, event: "create_job", message: `Job created: ${data?.job_id || intakeId}`, status: "success" });
               reload();
             } else {
-              setStatus(`Failed: ${esc(data?.error || String(res.status))}`);
+              const errMsg = data?.error || String(res.status);
+              setStatus(`Action failed — ${esc(errMsg)}`);
+              setBusy(false);
+              appendOmniLog({ intakeId, event: "action_failed", message: `create_job failed: ${errMsg}`, status: "error" });
             }
           } catch (err) {
             console.log("[omni] create_job error", err);
-            setStatus("Error — see console.");
+            setStatus("Action failed — see console.");
+            setBusy(false);
+            appendOmniLog({ intakeId, event: "action_failed", message: "create_job error — see console", status: "error" });
           }
           return;
         }
 
         if (type === "request_more_info") {
-          // No endpoint configured for v0.01 — log only
+          // No endpoint configured — log only
           console.log("[omni] request_more_info — no endpoint, logging only. intake_id:", intakeId || "(none)");
-          setStatus("Logged: request_more_info (no endpoint configured).");
+          setStatus("Request more info logged.");
+          markDone("Logged");
+          appendOmniLog({ intakeId: intakeId || undefined, event: "request_more_info", message: `Request more info logged${intakeId ? `: ${intakeId}` : ""}`, status: "info" });
           return;
         }
 
         console.log("[omni] unknown action:", type);
       }
 
-      renderOmniSuggestions();
+      // Fetch real suggestions from omni ingest, using job packet as intake source
+      async function fetchOmniSuggestions() {
+        const statusEl  = document.getElementById("omni-status");
+        const intakeId  = String(document.getElementById("omni-intake-id")?.value || "").trim();
+
+        function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+
+        if (!intakeId) { setStatus("Enter an Intake ID first."); return; }
+
+        setStatus("Fetching…");
+
+        // Step 1: try to load the intake payload from the job packet (job_id = job_${intakeId}).
+        // This is the only frontend-accessible path to the intake packet without Basic Auth.
+        // Falls back to a minimal payload if the job doesn't exist yet.
+        let intakePayload = { id: intakeId };
+        try {
+          const jobRes  = await fetch(`/api/job/by_id/${encodeURIComponent("job_" + intakeId)}`, {
+            method: "GET",
+            headers: { accept: "application/json", "x-tech-token": getToken(), "x-operator-slug": operatorSlug },
+          });
+          if (jobRes.ok) {
+            const jobData  = await jobRes.json().catch(() => null);
+            const snapshot = jobData?.job?.packet?.intake_snapshot;
+            if (snapshot && typeof snapshot === "object") {
+              intakePayload = snapshot; // full intake packet from job packet
+            }
+          }
+          // If 404 (no job yet) or token missing, intakePayload stays minimal —
+          // omni will still fire and return field-quality flags, which is useful.
+        } catch {
+          // network error — proceed with minimal payload
+        }
+
+        // Step 2: call omni ingest with the intake payload
+        const agentToken = getAgentToken();
+        try {
+          const omniRes  = await fetch("/api/omni/ingest", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-agent-token": agentToken },
+            body: JSON.stringify({ type: "intake_created", payload: intakePayload }),
+          });
+          const omniData = await omniRes.json().catch(() => null);
+          console.log("[omni] ingest response", omniRes.status, omniData);
+
+          if (!omniRes.ok || !omniData?.ok) {
+            setStatus(omniData?.error === "unauthorized"
+              ? "Agent token required — set planck.agent_token in sessionStorage."
+              : `Omni error: ${esc(omniData?.error || String(omniRes.status))}`);
+            return;
+          }
+
+          const suggestions   = Array.isArray(omniData.suggestions) ? omniData.suggestions : [];
+          const flags         = Array.isArray(omniData.flags)       ? omniData.flags       : [];
+          const qualityScore  = typeof omniData.quality_score === "number" ? omniData.quality_score : null;
+
+          renderOmniResults(suggestions, flags);
+          const scoreStr = qualityScore !== null ? ` · Quality: ${qualityScore}/100` : "";
+          setStatus(suggestions.length
+            ? `${suggestions.length} suggestion${suggestions.length === 1 ? "" : "s"}${flags.length ? ` · ${flags.length} flag${flags.length === 1 ? "" : "s"}` : ""}${scoreStr}`
+            : "No suggestions returned.");
+          appendOmniLog({ intakeId, event: "suggestions_loaded", message: `Loaded Omni suggestions for intake ${intakeId}`, status: "info" });
+        } catch (err) {
+          console.log("[omni] ingest error", err);
+          setStatus("Error calling omni — see console.");
+        }
+      }
+
+      // Render real omni suggestions + flags, preserving existing action handlers
+      function renderOmniResults(suggestions, flags) {
+        const list    = document.getElementById("omni-suggestions-list");
+        const flagsEl = document.getElementById("omni-flags-list");
+
+        if (list) {
+          if (!suggestions.length) {
+            list.innerHTML = `<p class="text-sm text-black/30 italic">No suggestions available.</p>`;
+          } else {
+            const labelMap = {
+              approve_intake:             "Approve Intake",
+              create_job:                 "Create Job",
+              request_more_info:          "Request More Info",
+              follow_up_customer:         "Follow Up with Customer",
+              generate_media_pack:        "Generate Media Pack",
+              assign_operator:            "Assign Operator",
+              notify_operator:            "Notify Operator",
+              schedule_job:               "Schedule Job",
+              confirm_payment:            "Confirm Payment",
+              deliver_record_to_customer: "Deliver Record",
+              archive_service_record:     "Archive Record",
+            };
+            const actionable = new Set(["approve_intake", "create_job", "request_more_info"]);
+
+            const priorityBadge = (p) => {
+              if (p === "high")   return `<span class="text-[10px] font-semibold tracking-wide text-black/50 mr-2">[HIGH]</span>`;
+              if (p === "medium") return `<span class="text-[10px] font-semibold tracking-wide text-black/30 mr-2">[MED]</span>`;
+              return                     `<span class="text-[10px] font-semibold tracking-wide text-black/20 mr-2">[LOW]</span>`;
+            };
+
+            list.innerHTML = suggestions.map((s) => {
+              const actionType = String(s.action || "");
+              const label      = String(s.label || labelMap[actionType] || actionType);
+              const badge      = priorityBadge(s.priority);
+              if (actionable.has(actionType)) {
+                return `<button type="button" data-omni-action="${esc(actionType)}"
+                  class="w-full text-left rounded-xl border border-black/15 px-4 py-2.5 text-sm text-black/70 hover:border-black/40 hover:text-black transition-colors"
+                >${badge}${esc(label)}</button>`;
+              }
+              return `<p class="px-1 py-1.5 text-sm text-black/40">${badge}${esc(label)}</p>`;
+            }).join("");
+
+            list.querySelectorAll("[data-omni-action]").forEach((btn) => {
+              btn.addEventListener("click", () => handleOmniAction(btn.dataset.omniAction, btn));
+            });
+          }
+        }
+
+        if (flagsEl) {
+          flagsEl.innerHTML = flags.length
+            ? flags.map((f) => {
+                const isHigh = f.priority === "high" || f.type === "warning";
+                const color  = isHigh ? "text-amber-600" : "text-black/40";
+                const icon   = isHigh ? "⚠" : "·";
+                return `<p class="text-xs ${color} px-1">${icon} ${esc(f.label || f.field || "flag")}</p>`;
+              }).join("")
+            : "";
+        }
+
+        // Persist results to memory keyed by current intake ID
+        const _saveId = String(document.getElementById("omni-intake-id")?.value || "").trim();
+        saveOmniMemory(_saveId, suggestions, flags);
+      }
+
+      document.getElementById("omni-fetch-btn")?.addEventListener("click", fetchOmniSuggestions);
+
+      // --- OMNI MEMORY START ---
+
+      function omniMemoryKey(intakeId) {
+        return `omni:${intakeId}`;
+      }
+
+      function saveOmniMemory(intakeId, suggestions, flags) {
+        if (!intakeId) return;
+        try {
+          sessionStorage.setItem(omniMemoryKey(intakeId), JSON.stringify({
+            suggestions: suggestions || [],
+            flags: flags || [],
+            timestamp: Date.now(),
+          }));
+        } catch { /* storage full or unavailable — degrade silently */ }
+      }
+
+      function loadOmniMemory(intakeId) {
+        if (!intakeId) return null;
+        try {
+          const raw = sessionStorage.getItem(omniMemoryKey(intakeId));
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          // Validate shape — must have a suggestions array
+          if (!Array.isArray(parsed?.suggestions)) return null;
+          return parsed;
+        } catch {
+          return null; // malformed storage — ignore
+        }
+      }
+
+      function restoreOmniMemory(intakeId) {
+        const statusEl = document.getElementById("omni-status");
+        function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+
+        if (!intakeId) return;
+
+        const mem = loadOmniMemory(intakeId);
+        if (!mem) {
+          setStatus("No cached suggestions — fetch to analyze.");
+          return;
+        }
+
+        renderOmniResults(mem.suggestions, mem.flags || []);
+        setStatus("Loaded cached suggestions.");
+      }
+
+      // Restore on input change (fires on blur / Enter — full ID expected)
+      document.getElementById("omni-intake-id")?.addEventListener("change", (e) => {
+        const intakeId = String(e.target?.value || "").trim();
+        restoreOmniMemory(intakeId);
+      });
+
+      // Restore on page load if input already has a value (e.g. browser form restore)
+      const _loadIntakeId = String(document.getElementById("omni-intake-id")?.value || "").trim();
+      if (_loadIntakeId) restoreOmniMemory(_loadIntakeId);
+
+      // --- OMNI MEMORY END ---
+
+      // --- OMNI ACTIVITY START ---
+
+      const OMNI_LOG_KEY = `omni-log:${operatorSlug}`;
+      const OMNI_LOG_MAX = 20;
+
+      function readOmniLog() {
+        try {
+          const raw = sessionStorage.getItem(OMNI_LOG_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function appendOmniLog(entry) {
+        const log = readOmniLog();
+        log.unshift({ timestamp: Date.now(), ...entry });
+        if (log.length > OMNI_LOG_MAX) log.length = OMNI_LOG_MAX;
+        try { sessionStorage.setItem(OMNI_LOG_KEY, JSON.stringify(log)); } catch {}
+        renderOmniActivity();
+      }
+
+      function renderOmniActivity() {
+        const el = document.getElementById("omni-activity-list");
+        if (!el) return;
+        const log = readOmniLog();
+        if (!log.length) {
+          el.innerHTML = `<p class="text-xs text-black/25 italic">No Omni activity yet.</p>`;
+          return;
+        }
+        el.innerHTML = log.map((e) => {
+          const time  = new Date(e.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const color = e.status === "success" ? "text-black/60"
+                      : e.status === "error"   ? "text-red-500"
+                      :                          "text-black/35";
+          const dot   = e.status === "success" ? "●" : e.status === "error" ? "✕" : "·";
+          return `<p class="text-xs ${color} flex gap-2"><span class="shrink-0 w-10 text-black/20">${esc(time)}</span><span class="shrink-0">${dot}</span><span>${esc(e.message)}</span></p>`;
+        }).join("");
+      }
+
+      renderOmniActivity(); // render on load from sessionStorage
+
+      // --- OMNI ACTIVITY END ---
+
+      renderOmniSuggestions(); // initial fallback render (static buttons — overridden by memory restore if available)
 
       // --- OMNI SECTION END ---
 
