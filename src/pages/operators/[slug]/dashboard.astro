@@ -114,6 +114,12 @@ if (!operator) {
         </div>
         <!-- --- OMNI ACTIVITY END --- -->
 
+        <!-- Recent Agent Routing -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-4">Recent Agent Routing</p>
+          <div id="agent-routing-log" class="text-sm text-black/40">Loading…</div>
+        </div>
+
         <!-- Token -->
         <div class="rounded-2xl border border-black/10 p-5">
           <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">TECH Token</p>
@@ -939,6 +945,62 @@ if (!operator) {
 
       // --- OMNI SECTION END ---
 
+      // ── Agent Routing Log ────────────────────────────────────────────────────
+
+      async function loadAgentRoutingLog() {
+        const el = document.getElementById("agent-routing-log");
+        const agentToken = getAgentToken();
+
+        if (!agentToken) {
+          if (el) el.innerHTML = `<p class="text-black/25 italic text-xs">Set planck.agent_token to view routing logs.</p>`;
+          return;
+        }
+
+        try {
+          const res  = await fetch("/api/agents/logs", {
+            method: "GET",
+            headers: { accept: "application/json", "x-agent-token": agentToken },
+          });
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok || !data?.ok) {
+            if (el) el.innerHTML = `<p class="text-black/25 italic text-xs">Unable to load routing logs.</p>`;
+            return;
+          }
+
+          const logs = (data.logs || []).slice(0, 5);
+
+          if (!logs.length) {
+            if (el) el.innerHTML = `<p class="text-black/25 italic text-xs">No recent agent routing yet.</p>`;
+            return;
+          }
+
+          if (el) el.innerHTML = logs.map((entry) => {
+            const agents     = Array.isArray(entry.selected_agents) && entry.selected_agents.length
+              ? entry.selected_agents.join(", ")
+              : "—";
+            const confidence = typeof entry.confidence === "number"
+              ? `${Math.round(entry.confidence * 100)}%`
+              : "—";
+            const time = entry.created_at
+              ? new Date(entry.created_at).toLocaleString(undefined, {
+                  month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+                })
+              : "—";
+
+            return `<div class="flex flex-wrap gap-x-4 gap-y-0.5 py-2 border-b border-black/5 last:border-0 text-xs">
+              <span class="font-mono text-black/50">${esc(entry.event_type || "—")}</span>
+              <span class="text-black/40">${esc(agents)}</span>
+              <span class="text-black/30">${esc(confidence)}</span>
+              <span class="text-black/20 ml-auto">${esc(time)}</span>
+            </div>`;
+          }).join("");
+
+        } catch {
+          if (el) el.innerHTML = `<p class="text-black/25 italic text-xs">Unable to load routing logs.</p>`;
+        }
+      }
+
       // ── Boot ─────────────────────────────────────────────────────────────────
 
       async function reload() {
@@ -991,6 +1053,7 @@ if (!operator) {
 
       reload();
       setInterval(reload, 20000);
+      loadAgentRoutingLog();
     </script>
   </body>
 </html>
