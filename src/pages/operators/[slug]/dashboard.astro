@@ -22,16 +22,72 @@ if (!operator) {
     <main class="mx-auto max-w-2xl px-4 py-10 sm:px-6">
 
       <header class="mb-8">
-        <p class="text-xs uppercase tracking-widest text-black/30">Operator Dashboard</p>
+        <p class="text-xs uppercase tracking-widest text-black/30">Operator Control Plane</p>
         <h1 class="mt-1 text-2xl font-semibold">{operator.name}</h1>
-        <p class="mt-1 text-sm text-black/50">{operator.regionName}</p>
+        <p class="mt-1 text-sm text-black/50">{operator.surface} · {operator.regionName}</p>
       </header>
 
       <div class="grid gap-5">
 
-        <!-- Token management -->
+        <!-- Lifecycle Rail -->
         <div class="rounded-2xl border border-black/10 p-5">
-          <h2 class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">TECH Token</h2>
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-4">Job Lifecycle</p>
+          <div id="lifecycle-rail" class="flex items-start gap-0 overflow-x-auto pb-1">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Now — Next Action -->
+        <div id="next-action-card" class="rounded-2xl border border-black p-5">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">Now</p>
+          <div id="next-action-body" class="text-sm text-black/40">Loading…</div>
+        </div>
+
+        <!-- Active Job -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">Active Job</p>
+          <div id="active-job" class="text-sm text-black/40">Checking…</div>
+        </div>
+
+        <!-- Ready to Claim -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">Ready to Claim</p>
+          <div id="current-job" class="text-sm text-black/40">Checking…</div>
+        </div>
+
+        <!-- Completed Jobs -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <div class="flex items-baseline justify-between mb-4">
+            <p class="text-xs font-semibold uppercase tracking-widest text-black/30">Completed</p>
+            <span id="completed-count" class="text-xs text-black/25"></span>
+          </div>
+          <div id="completed-jobs" class="text-sm text-black/40">Checking…</div>
+        </div>
+
+        <!-- --- OMNI SECTION START --- -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <div class="flex items-baseline justify-between mb-4">
+            <p class="text-xs font-semibold uppercase tracking-widest text-black/30">Omni Suggestions</p>
+            <span class="text-xs text-black/20">v0.01</span>
+          </div>
+          <div class="mb-3 flex gap-2">
+            <input
+              id="omni-intake-id"
+              type="text"
+              placeholder="Intake ID…"
+              class="flex-1 rounded-xl border border-black/20 px-3 py-2 text-xs font-mono"
+            />
+          </div>
+          <div id="omni-suggestions-list" class="grid gap-2">
+            <!-- rendered by JS -->
+          </div>
+          <p id="omni-status" class="mt-3 text-xs text-black/40 min-h-[1em]"></p>
+        </div>
+        <!-- --- OMNI SECTION END --- -->
+
+        <!-- Token -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">TECH Token</p>
           <div class="flex gap-2">
             <input
               id="dashboard-token-input"
@@ -50,39 +106,19 @@ if (!operator) {
           <p id="dashboard-token-status" class="mt-2 text-xs text-black/40"></p>
         </div>
 
-        <!-- In Progress -->
-        <div class="rounded-2xl border border-black/10 p-5">
-          <h2 class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">In Progress</h2>
-          <div id="active-job" class="text-sm text-black/40">Checking…</div>
-        </div>
-
-        <!-- Ready to Claim -->
-        <div class="rounded-2xl border border-black/10 p-5">
-          <h2 class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">Ready to Claim</h2>
-          <div id="current-job" class="text-sm text-black/40">Checking…</div>
-        </div>
-
-        <!-- Completed Jobs -->
-        <div class="rounded-2xl border border-black/10 p-5">
-          <div class="flex items-baseline justify-between mb-4">
-            <h2 class="text-xs font-semibold uppercase tracking-widest text-black/30">Completed Jobs</h2>
-            <span id="completed-count" class="text-xs text-black/25"></span>
-          </div>
-          <div id="completed-jobs" class="text-sm text-black/40">Checking…</div>
-        </div>
-
       </div>
     </main>
 
-    <script define:vars={{ operatorSlug: operator.slug }}>
+    <script define:vars={{ operatorSlug: operator.slug, operatorSurface: operator.surface }}>
+
+      // ── Token ─────────────────────────────────────────────────────────────────
+
       function getToken() {
         try { return sessionStorage.getItem("planck.tech_token") || ""; } catch { return ""; }
       }
       function setToken(val) {
         try { sessionStorage.setItem("planck.tech_token", val); } catch {}
       }
-
-      let techToken = getToken();
 
       function makeHeaders() {
         return {
@@ -101,10 +137,8 @@ if (!operator) {
           .replaceAll("'", "&#039;");
       }
 
-      // ── Token management ──────────────────────────────────────────────────────
-
-      const tokenInput = document.getElementById("dashboard-token-input");
-      const tokenSaveBtn = document.getElementById("dashboard-token-save");
+      const tokenInput    = document.getElementById("dashboard-token-input");
+      const tokenSaveBtn  = document.getElementById("dashboard-token-save");
       const tokenStatusEl = document.getElementById("dashboard-token-status");
 
       function updateTokenDisplay() {
@@ -112,7 +146,7 @@ if (!operator) {
         if (tokenInput) tokenInput.value = token;
         if (tokenStatusEl) {
           tokenStatusEl.textContent = token
-            ? "Token active — job data will load with this token."
+            ? "Token active."
             : "No token set — enter your TECH token above.";
         }
       }
@@ -120,38 +154,192 @@ if (!operator) {
       tokenSaveBtn?.addEventListener("click", () => {
         const val = String(tokenInput?.value || "").trim();
         setToken(val);
-        techToken = val;
         updateTokenDisplay();
-        // Reload job sections with new token
-        const activeEl = document.getElementById("active-job");
-        const currentEl = document.getElementById("current-job");
-        const completedEl = document.getElementById("completed-jobs");
-        if (activeEl) activeEl.textContent = "Checking…";
-        if (currentEl) currentEl.textContent = "Checking…";
-        if (completedEl) completedEl.textContent = "Checking…";
-        loadActive();
-        loadCurrent();
-        loadCompleted();
+        reload();
       });
 
       updateTokenDisplay();
 
+      // ── Lifecycle rail ────────────────────────────────────────────────────────
+
+      const LIFECYCLE_STEPS = operatorSurface === "event-coordination"
+        ? [
+            { key: "queued",      label: "Queued"          },
+            { key: "claimed",     label: "Confirmed"       },
+            { key: "arrived",     label: "Vendor Arrival"  },
+            { key: "in_progress", label: "Event Live"      },
+            { key: "evidence",    label: "Breakdown"       },
+            { key: "complete",    label: "Closed"          },
+          ]
+        : [
+            { key: "queued",      label: "Queued"      },
+            { key: "claimed",     label: "Claimed"     },
+            { key: "arrived",     label: "Arrived"     },
+            { key: "in_progress", label: "In Progress" },
+            { key: "evidence",    label: "Evidence"    },
+            { key: "complete",    label: "Complete"    },
+          ];
+
+      function resolveLifecycleStep(activeJob, queuedJob) {
+        if (!activeJob && queuedJob) return "queued";
+        if (!activeJob) return "queued";
+
+        const seStatus      = activeJob.service_event_summary?.status ?? null;
+        const payStatus     = activeJob.service_event_summary?.payment_status ?? null;
+        const evidenceCount = activeJob.service_event_summary?.evidence_count ?? 0;
+
+        if (!seStatus)                    return "claimed";
+        if (seStatus === "created")       return "arrived";
+        if (seStatus === "in_progress")   return evidenceCount > 0 ? "evidence" : "in_progress";
+        if (seStatus === "completed")     return (payStatus === "paid" || payStatus === "waived") ? "complete" : "evidence";
+        return "claimed";
+      }
+
+      function renderLifecycleRail(currentKey) {
+        const rail = document.getElementById("lifecycle-rail");
+        if (!rail) return;
+
+        const currentIdx = LIFECYCLE_STEPS.findIndex(s => s.key === currentKey);
+
+        rail.innerHTML = LIFECYCLE_STEPS.map((step, idx) => {
+          const isPast    = idx < currentIdx;
+          const isCurrent = idx === currentIdx;
+
+          const dotClass = isCurrent
+            ? "h-2.5 w-2.5 rounded-full bg-black flex-shrink-0"
+            : isPast
+              ? "h-2 w-2 rounded-full bg-black/30 flex-shrink-0"
+              : "h-2 w-2 rounded-full border border-black/20 flex-shrink-0";
+
+          const labelClass = isCurrent
+            ? "text-[11px] font-semibold text-black mt-1.5 whitespace-nowrap"
+            : isPast
+              ? "text-[11px] text-black/30 mt-1.5 whitespace-nowrap"
+              : "text-[11px] text-black/20 mt-1.5 whitespace-nowrap";
+
+          const connector = idx < LIFECYCLE_STEPS.length - 1
+            ? `<div class="h-px flex-1 min-w-[8px] mt-[5px] self-start ${isPast || isCurrent ? "bg-black/20" : "bg-black/08"}"></div>`
+            : "";
+
+          return `<div class="flex flex-col items-center min-w-0"><div class="${dotClass}"></div><span class="${labelClass}">${esc(step.label)}</span></div>${connector}`;
+        }).join("");
+      }
+
+      // ── Next action resolver ──────────────────────────────────────────────────
+
+      const isEvent = operatorSurface === "event-coordination";
+
+      function resolveNextAction(activeJob, queuedJob) {
+        if (activeJob) {
+          const seStatus      = activeJob.service_event_summary?.status ?? null;
+          const payStatus     = activeJob.service_event_summary?.payment_status ?? null;
+          const evidenceCount = activeJob.service_event_summary?.evidence_count ?? 0;
+          const href          = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(activeJob.job_id)}`;
+
+          if (!seStatus) return {
+            label:    isEvent ? "Open the active event to begin coordination." : "Open your active job to begin execution.",
+            sublabel: "ServiceEvent not yet initialized.",
+            cta: isEvent ? "Open Event →" : "Open Job →", href,
+          };
+          if (seStatus === "created") return {
+            label:    isEvent ? "Vendors are arriving. Log arrival and begin event setup." : "You have arrived on site. Mark your arrival and start service.",
+            sublabel: isEvent ? "Next: vendor arrival photo → start setup." : "Next: arrival photo → start service.",
+            cta: isEvent ? "Start Setup →" : "Start Service →", href,
+          };
+          if (seStatus === "in_progress" && evidenceCount === 0) return {
+            label:    isEvent ? "Event is live. Capture setup or milestone photos." : "Service is in progress. Capture before photos now.",
+            sublabel: "No evidence uploaded yet.",
+            cta: "Add Evidence →", href,
+          };
+          if (seStatus === "in_progress") return {
+            label:    isEvent ? "Event in progress. Close when breakdown is complete." : "Service in progress. Complete when ready.",
+            sublabel: `${evidenceCount} photo${evidenceCount === 1 ? "" : "s"} captured.`,
+            cta: isEvent ? "Continue Event →" : "Continue Job →", href,
+          };
+          if (seStatus === "completed" && (payStatus === "unpaid" || !payStatus)) return {
+            label:    isEvent ? "Event closed. Record final payment before archiving." : "Service complete. Record payment before closing.",
+            sublabel: "Payment not yet recorded.",
+            cta: "Record Payment →", href,
+          };
+          return {
+            label:    isEvent ? "Event closed and payment recorded. Record ready." : "Service complete and payment recorded. Job ready to close.",
+            sublabel: `Payment: ${payStatus}.`,
+            cta: "View Record →", href,
+          };
+        }
+
+        if (queuedJob) return {
+          label:    isEvent ? "An event request is waiting. Confirm it to begin." : "A job is waiting. Claim it to begin.",
+          sublabel: isEvent ? "No active event — queue has a request." : "No active job — queue has work.",
+          cta: isEvent ? "Confirm & Start →" : "Claim & Start →", href: null, isClaim: true,
+        };
+
+        return {
+          label:    isEvent ? "All clear. No active events or pending requests." : "All clear. No active jobs or pending queue.",
+          sublabel: "Waiting for new requests.",
+          cta: null, href: null,
+        };
+      }
+
+      function renderNextAction(action) {
+        const body = document.getElementById("next-action-body");
+        if (!body) return;
+
+        let ctaHtml = "";
+        if (action.cta && action.href) {
+          ctaHtml = `<p class="mt-4"><a href="${esc(action.href)}" class="inline-block rounded-xl border border-black px-4 py-2 text-sm font-medium">${esc(action.cta)}</a></p>`;
+        } else if (action.cta && action.isClaim) {
+          ctaHtml = `<div class="mt-4 flex items-center gap-3">
+            <button id="next-action-claim-btn" type="button" class="rounded-xl border border-black px-4 py-2 text-sm font-medium">${esc(action.cta)}</button>
+            <span id="next-action-claim-error" class="text-sm text-red-600"></span>
+          </div>`;
+        }
+
+        body.innerHTML = `
+          <p class="text-base font-medium text-black leading-snug">${esc(action.label)}</p>
+          ${action.sublabel ? `<p class="mt-1 text-sm text-black/50">${esc(action.sublabel)}</p>` : ""}
+          ${ctaHtml}
+        `;
+
+        if (action.isClaim) {
+          document.getElementById("next-action-claim-btn")?.addEventListener("click", () => {
+            const btn = document.getElementById("next-action-claim-btn");
+            if (btn) { btn.disabled = true; btn.textContent = "Claiming…"; }
+            claimJob().catch(() => {
+              if (btn) { btn.disabled = false; btn.textContent = "Claim & Start →"; }
+            });
+          });
+        }
+      }
+
       // ── Job card helper ───────────────────────────────────────────────────────
 
       function jobSummary(job) {
-        const snap = job.packet?.intake_snapshot?.data || {};
+        const snap    = job.packet?.intake_snapshot?.data || {};
         const contact = snap.contact || {};
-        const asset = snap.asset || {};
+        const asset   = snap.asset || {};
         const request = snap.request || {};
-        const customer = esc(contact.name || "—");
-        const assetDesc = esc(asset.details || asset.class || "—");
-        const tier = esc(request.tier || request.tier_id || "—");
-        const jobId = esc(job.job_id || "");
         return `<div class="grid gap-1">
-          <p class="font-medium text-black">${customer}</p>
-          <p class="text-sm text-black/60">${assetDesc} · ${tier}</p>
-          <p class="mt-1 text-xs text-black/25 font-mono">${jobId}</p>
+          <p class="font-medium text-black">${esc(contact.name || "—")}</p>
+          <p class="text-sm text-black/60">${esc(asset.details || asset.class || "—")} · ${esc(request.tier || request.tier_id || "—")}</p>
+          <p class="mt-1 text-xs text-black/25 font-mono">${esc(job.job_id || "")}</p>
         </div>`;
+      }
+
+      // ── Claim ─────────────────────────────────────────────────────────────────
+
+      async function claimJob() {
+        const res  = await fetch("/api/job/claim", {
+          method: "POST",
+          headers: { accept: "application/json", "x-tech-token": getToken(), "x-operator-slug": operatorSlug },
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok || !data?.job) {
+          const errEl = document.getElementById("claim-error") || document.getElementById("next-action-claim-error");
+          if (errEl) errEl.textContent = "Failed: " + esc(data?.error || String(res.status));
+          throw new Error(data?.error || "claim_failed");
+        }
+        window.location.href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}`;
       }
 
       // ── Loaders ───────────────────────────────────────────────────────────────
@@ -159,101 +347,73 @@ if (!operator) {
       async function loadActive() {
         const el = document.getElementById("active-job");
         try {
-          const res = await fetch("/api/job/active", { method: "GET", headers: makeHeaders() });
+          const res  = await fetch("/api/job/active", { method: "GET", headers: makeHeaders() });
           const data = await res.json().catch(() => null);
-          if (!data?.ok) {
-            el.textContent = "Could not load active job.";
-            return;
-          }
-          if (data.job) {
-            const href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(data.job.job_id)}`;
-            el.innerHTML = `${jobSummary(data.job)}
-              <p class="mt-4">
-                <a
-                  href="${esc(href)}"
-                  class="inline-block rounded-xl border border-black px-4 py-2 text-sm font-medium"
-                >
-                  Continue Job →
-                </a>
-              </p>`;
-          } else {
-            el.innerHTML = `<p class="text-black/30 italic text-sm">No active job.</p>`;
-          }
-        } catch {
-          el.textContent = "Error — check connection.";
-        }
-      }
+          if (!data?.ok) { if (el) el.textContent = "Could not load active job."; return null; }
 
-      async function claimJob() {
-        const claimRes = await fetch("/api/job/claim", {
-          method: "POST",
-          headers: {
-            accept: "application/json",
-            "x-tech-token": getToken(),
-            "x-operator-slug": operatorSlug,
-          },
-        });
-        const claimData = await claimRes.json().catch(() => null);
-        if (!claimRes.ok || !claimData?.ok || !claimData?.job) {
-          const errEl = document.getElementById("claim-error");
-          if (errEl) errEl.textContent = "Failed: " + (claimData?.error || claimRes.status);
-          return;
+          const job = data.job ?? null;
+
+          if (job) {
+            const se   = job.service_event_summary || {};
+            const href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(job.job_id)}`;
+            if (el) el.innerHTML = `${jobSummary(job)}
+              <p class="mt-2 text-xs text-black/40">SE: ${esc(se.status || "not started")} · ${se.evidence_count ?? 0} photo${se.evidence_count === 1 ? "" : "s"}</p>
+              <p class="mt-3"><a href="${esc(href)}" class="inline-block rounded-xl border border-black px-4 py-2 text-sm font-medium">Open Job →</a></p>`;
+          } else {
+            if (el) el.innerHTML = `<p class="text-black/30 italic text-sm">No active job.</p>`;
+          }
+          return job;
+        } catch {
+          if (el) el.textContent = "Error — check connection.";
+          return null;
         }
-        window.location.href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(claimData.job.job_id)}`;
       }
 
       async function loadCurrent() {
         const el = document.getElementById("current-job");
         try {
-          const res = await fetch("/api/job/current", { method: "GET", headers: makeHeaders() });
+          const res  = await fetch("/api/job/current", { method: "GET", headers: makeHeaders() });
           const data = await res.json().catch(() => null);
-          if (!data?.ok) {
-            el.textContent = "Could not load queue.";
-            return;
-          }
-          if (data.job) {
-            el.innerHTML = `${jobSummary(data.job)}
+          if (!data?.ok) { if (el) el.textContent = "Could not load queue."; return null; }
+
+          const job = data.job ?? null;
+
+          if (job) {
+            if (el) el.innerHTML = `${jobSummary(job)}
               <div class="mt-4 flex items-center gap-3">
-                <button
-                  id="claim-btn"
-                  type="button"
-                  class="rounded-xl border border-black px-4 py-2 text-sm font-medium"
-                >
-                  Claim &amp; Start →
-                </button>
+                <button id="claim-btn" type="button" class="rounded-xl border border-black px-4 py-2 text-sm font-medium">Claim &amp; Start →</button>
                 <span id="claim-error" class="text-sm text-red-600"></span>
               </div>`;
-            document.getElementById("claim-btn").addEventListener("click", () => {
+            document.getElementById("claim-btn")?.addEventListener("click", () => {
               const btn = document.getElementById("claim-btn");
-              btn.disabled = true;
-              btn.textContent = "Claiming…";
+              if (btn) { btn.disabled = true; btn.textContent = "Claiming…"; }
               claimJob().catch(() => {
-                btn.disabled = false;
-                btn.textContent = "Claim & Start →";
+                if (btn) { btn.disabled = false; btn.textContent = "Claim & Start →"; }
               });
             });
           } else {
-            el.innerHTML = `<p class="text-black/30 italic text-sm">Queue is empty.</p>`;
+            if (el) el.innerHTML = `<p class="text-black/30 italic text-sm">Queue is empty.</p>`;
           }
+          return job;
         } catch {
-          el.textContent = "Error — check connection.";
+          if (el) el.textContent = "Error — check connection.";
+          return null;
         }
       }
 
       async function loadCompleted() {
-        const el = document.getElementById("completed-jobs");
+        const el      = document.getElementById("completed-jobs");
         const countEl = document.getElementById("completed-count");
         try {
-          const res = await fetch("/api/job/completed", { method: "GET", headers: makeHeaders() });
+          const res  = await fetch("/api/job/completed", { method: "GET", headers: makeHeaders() });
           const data = await res.json().catch(() => null);
-          if (!data?.ok) {
-            el.textContent = "Could not load completed jobs.";
-            return;
-          }
+          if (!data?.ok) { if (el) el.textContent = "Could not load completed jobs."; return; }
+
           const jobs = data.jobs || [];
           if (countEl) countEl.textContent = jobs.length ? `${jobs.length} job${jobs.length === 1 ? "" : "s"}` : "";
+
           if (!jobs.length) {
-            el.innerHTML = `<p class="text-black/30 italic text-sm">No completed jobs yet.</p>`;
+            if (el) el.innerHTML = `<p class="text-black/30 italic text-sm">No completed jobs yet.</p>`;
             return;
           }
 
@@ -268,46 +428,33 @@ if (!operator) {
             return `<span class="inline-block rounded-md px-2 py-0.5 text-xs font-medium ${cls}">${label}</span>`;
           }
 
-          el.innerHTML = jobs.map((job) => {
-            const snap = job.packet?.intake_snapshot?.data || {};
+          if (el) el.innerHTML = jobs.map((job) => {
+            const snap    = job.packet?.intake_snapshot?.data || {};
             const contact = snap.contact || {};
-            const asset = snap.asset || {};
-            const req = snap.request || {};
-            const se = job.service_event_summary || {};
-
-            const customer   = esc(contact.name || "—");
-            const assetDesc  = esc(asset.details || asset.class || "—");
-            const tier       = esc(se.tier || req.tier_id || req.tier || "—");
-            const area       = esc(req.service_area || se.surface || "—");
-            const photos     = Number(se.evidence_count) || 0;
-            const payStatus  = String(se.payment_status || "unpaid");
-            const amount     = typeof se.amount_collected === "number"
-              ? ` · $${se.amount_collected.toFixed(2)}`
-              : "";
-
+            const asset   = snap.asset || {};
+            const req     = snap.request || {};
+            const se      = job.service_event_summary || {};
+            const photos  = Number(se.evidence_count) || 0;
+            const payStatus = String(se.payment_status || "unpaid");
+            const amount  = typeof se.amount_collected === "number" ? ` · $${se.amount_collected.toFixed(2)}` : "";
             const completedAt = job.state?.completed_at
               ? new Date(job.state.completed_at).toLocaleString(undefined, {
-                  month: "short", day: "numeric", year: "numeric",
-                  hour: "numeric", minute: "2-digit",
+                  month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
                 })
               : "—";
-
             const href = `/operators/${operatorSlug}/jobs/?job=${encodeURIComponent(job.job_id)}`;
 
             return `<div class="rounded-xl border border-black/8 p-4 grid gap-3">
               <div class="flex items-start justify-between gap-3">
                 <div class="grid gap-0.5 min-w-0">
-                  <p class="font-semibold text-black leading-tight">${customer}</p>
-                  <p class="text-sm text-black/60">${assetDesc}</p>
+                  <p class="font-semibold text-black leading-tight">${esc(contact.name || "—")}</p>
+                  <p class="text-sm text-black/60">${esc(asset.details || asset.class || "—")}</p>
                 </div>
-                <a
-                  href="${esc(href)}"
-                  class="shrink-0 rounded-lg border border-black/15 px-3 py-1 text-xs font-medium text-black/60 hover:text-black hover:border-black/40 transition-colors"
-                >View →</a>
+                <a href="${esc(href)}" class="shrink-0 rounded-lg border border-black/15 px-3 py-1 text-xs font-medium text-black/60 hover:text-black hover:border-black/40 transition-colors">View →</a>
               </div>
               <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-black/50">
-                <span>${tier}</span>
-                <span>${area}</span>
+                <span>${esc(se.tier || req.tier_id || req.tier || "—")}</span>
+                <span>${esc(req.service_area || se.surface || "—")}</span>
               </div>
               <div class="h-px bg-black/5"></div>
               <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-black/40">
@@ -318,20 +465,126 @@ if (!operator) {
             </div>`;
           }).join("");
         } catch {
-          el.textContent = "Error — check connection.";
+          if (el) el.textContent = "Error — check connection.";
         }
       }
 
-      loadActive();
-      loadCurrent();
-      loadCompleted();
+      // ── Omni ─────────────────────────────────────────────────────────────────
+      // --- OMNI SECTION START ---
 
-      // Auto-refresh every 20 seconds — no page reload needed during demo
-      setInterval(() => {
-        loadActive();
-        loadCurrent();
+      function getAgentToken() {
+        try { return sessionStorage.getItem("planck.agent_token") || ""; } catch { return ""; }
+      }
+
+      const OMNI_SUGGESTIONS = [
+        { type: "approve_intake",    label: "Approve Intake"    },
+        { type: "request_more_info", label: "Request More Info" },
+        { type: "create_job",        label: "Create Job"        },
+      ];
+
+      function renderOmniSuggestions() {
+        const list = document.getElementById("omni-suggestions-list");
+        if (!list) return;
+
+        if (!OMNI_SUGGESTIONS.length) {
+          list.innerHTML = `<p class="text-sm text-black/30 italic">No suggestions available.</p>`;
+          return;
+        }
+
+        list.innerHTML = OMNI_SUGGESTIONS.map((s) =>
+          `<button
+             type="button"
+             data-omni-action="${esc(s.type)}"
+             class="w-full text-left rounded-xl border border-black/15 px-4 py-2.5 text-sm text-black/70 hover:border-black/40 hover:text-black transition-colors"
+           >${esc(s.label)}</button>`
+        ).join("");
+
+        list.querySelectorAll("[data-omni-action]").forEach((btn) => {
+          btn.addEventListener("click", () => handleOmniAction(btn.dataset.omniAction));
+        });
+      }
+
+      async function handleOmniAction(type) {
+        const statusEl  = document.getElementById("omni-status");
+        const intakeId  = String(document.getElementById("omni-intake-id")?.value || "").trim();
+        const agentToken = getAgentToken();
+
+        function setStatus(msg) {
+          if (statusEl) statusEl.textContent = msg;
+        }
+
+        if (type === "approve_intake") {
+          if (!intakeId) { setStatus("Enter an Intake ID first."); return; }
+          setStatus("Approving…");
+          try {
+            const res  = await fetch("/api/agent/intake/queue", {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-agent-token": agentToken },
+              body: JSON.stringify({ intake_id: intakeId }),
+            });
+            const data = await res.json().catch(() => null);
+            console.log("[omni] approve_intake", res.status, data);
+            setStatus(res.ok
+              ? `Approved: ${intakeId}${data?.note === "already_approved" ? " (already approved)" : ""}`
+              : `Failed: ${esc(data?.error || String(res.status))}`);
+          } catch (err) {
+            console.log("[omni] approve_intake error", err);
+            setStatus("Error — see console.");
+          }
+          return;
+        }
+
+        if (type === "create_job") {
+          if (!intakeId) { setStatus("Enter an Intake ID first."); return; }
+          setStatus("Creating job…");
+          try {
+            const res  = await fetch(`/api/agent/job/create/${encodeURIComponent(intakeId)}`, {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-agent-token": agentToken },
+              body: JSON.stringify({ operator_slug: operatorSlug }),
+            });
+            const data = await res.json().catch(() => null);
+            console.log("[omni] create_job", res.status, data);
+            if (res.ok) {
+              setStatus(`Job created: ${esc(data?.job_id || intakeId)}`);
+              reload();
+            } else {
+              setStatus(`Failed: ${esc(data?.error || String(res.status))}`);
+            }
+          } catch (err) {
+            console.log("[omni] create_job error", err);
+            setStatus("Error — see console.");
+          }
+          return;
+        }
+
+        if (type === "request_more_info") {
+          // No endpoint configured for v0.01 — log only
+          console.log("[omni] request_more_info — no endpoint, logging only. intake_id:", intakeId || "(none)");
+          setStatus("Logged: request_more_info (no endpoint configured).");
+          return;
+        }
+
+        console.log("[omni] unknown action:", type);
+      }
+
+      renderOmniSuggestions();
+
+      // --- OMNI SECTION END ---
+
+      // ── Boot ─────────────────────────────────────────────────────────────────
+
+      async function reload() {
+        const [activeJob, queuedJob] = await Promise.all([loadActive(), loadCurrent()]);
         loadCompleted();
-      }, 20000);
+        const step   = resolveLifecycleStep(activeJob, queuedJob);
+        const action = resolveNextAction(activeJob, queuedJob);
+        renderLifecycleRail(step);
+        renderNextAction(action);
+      }
+
+      reload();
+      setInterval(reload, 20000);
     </script>
   </body>
 </html>
