@@ -1,0 +1,209 @@
+---
+import OperatorLayout from "../../../layouts/OperatorLayout.astro";
+import RequestIntake from "../../../components/EventRequestIntake.astro";
+import type { Operator } from "../../../data/operators";
+
+interface Props {
+  operator: Operator;
+}
+
+const { operator } = Astro.props;
+---
+
+<OperatorLayout
+  title={operator.name}
+  operatorName={operator.name}
+  operatorLogo={operator.logo}
+  region={operator.regionName}
+  bookingHref={operator.bookingHref}
+>
+  <main>
+    <section class="relative overflow-hidden min-h-[75vh] py-16 sm:py-24">
+      <div class="absolute inset-0 -z-10">
+        <div class="h-full w-full bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_60%)]"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-bg via-bg/95 to-bg"></div>
+      </div>
+
+      <div class="mx-auto max-w-content px-4 sm:px-6">
+        <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
+          <div class="lg:col-span-8">
+            <p class="text-xs tracking-wide text-text/70">
+              event coordination · {operator.regionName.toLowerCase()}
+            </p>
+
+            <h1 class="mt-4 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tightest leading-tight">
+              structured execution.<br />every detail tracked.
+            </h1>
+
+            <p class="mt-7 max-w-2xl text-lg text-text/70 leading-relaxed">
+              live event coordination executed with defined vendor assignment, schedule
+              checkpoints, evidence capture, and a complete service record from booking
+              to close.
+            </p>
+
+            <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a
+                href={operator.bookingHref}
+                class="inline-flex items-center justify-center border border-border px-8 py-4 hover:border-accent transition-colors"
+              >
+                request event coordination
+              </a>
+
+              <a
+                href="#services"
+                class="inline-flex items-center justify-center px-8 py-4 text-sm text-text hover:text-accent transition-colors"
+              >
+                view coordination services →
+              </a>
+            </div>
+
+            <div class="mt-10 grid gap-3 sm:grid-cols-3 max-w-2xl">
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs tracking-wide text-text/70">coordination</p>
+                <p class="mt-2 text-sm text-text">vendors, staff, and schedule in one structure.</p>
+              </div>
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs tracking-wide text-text/70">execution</p>
+                <p class="mt-2 text-sm text-text">setup, live, teardown. every phase tracked.</p>
+              </div>
+              <div class="rounded-xl border border-border bg-bg/50 p-4 backdrop-blur-sm">
+                <p class="text-xs tracking-wide text-text/70">record</p>
+                <p class="mt-2 text-sm text-text">final event record on close. always.</p>
+              </div>
+            </div>
+          </div>
+
+          <aside class="lg:col-span-4">
+            <div class="border border-border p-8 space-y-6 bg-bg/70 backdrop-blur-sm">
+              <div>
+                <p class="text-xs tracking-wide text-text/70">service model</p>
+                <p class="mt-2 text-sm text-text">
+                  events are reviewed by date, venue, and scope.
+                  capacity is managed intentionally.
+                </p>
+              </div>
+
+              <div class="border-t border-border pt-6">
+                <p class="text-xs tracking-wide text-text/70">what we coordinate</p>
+                <ul class="mt-3 space-y-2 text-sm text-text/70 leading-relaxed">
+                  <li>• booking + deposit confirmation</li>
+                  <li>• vendor and staff assignment</li>
+                  <li>• schedule and run-of-show</li>
+                  <li>• setup, live event, and teardown</li>
+                  <li>• settlement and final record</li>
+                </ul>
+              </div>
+
+              <div class="border-t border-border pt-6">
+                <p class="text-xs tracking-wide text-text/70">what we don't replace</p>
+                <ul class="mt-3 space-y-2 text-sm text-text/70 leading-relaxed">
+                  <li>• catering or kitchen operations</li>
+                  <li>• ticketing or guest management platforms</li>
+                  <li>• creative design or décor production</li>
+                </ul>
+              </div>
+
+              <div class="border-t border-border pt-6">
+                <p class="text-xs tracking-wide text-text/70">standards</p>
+                <ul class="mt-3 space-y-2 text-sm text-text/70 leading-relaxed">
+                  <li>• booking confirmed before coordination begins.</li>
+                  <li>• evidence captured at each execution phase.</li>
+                  <li>• event record issued on close.</li>
+                </ul>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section id="services" class="py-24 border-t border-border">
+      <div class="mx-auto max-w-content px-4 sm:px-6">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 class="text-3xl font-semibold">event coordination services</h2>
+            <p class="mt-4 max-w-3xl text-muted leading-relaxed">
+              structured execution for live events of all scales.
+              each event follows a defined lifecycle — booked, assigned, executed, documented, closed.
+            </p>
+          </div>
+
+          <a
+            href={operator.bookingHref}
+            class="inline-flex items-center justify-center border border-border px-6 py-3 hover:border-accent transition-colors"
+          >
+            request →
+          </a>
+        </div>
+
+        <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="border border-border p-6 space-y-3">
+            <p class="text-xs tracking-wide text-text/70">service</p>
+            <p class="text-lg font-semibold">booking coordination</p>
+            <p class="text-sm text-text/70 leading-relaxed">
+              intake, quote, deposit, and booking confirmation.
+              single structured record from first contact.
+            </p>
+          </div>
+
+          <div class="border border-border p-6 space-y-3">
+            <p class="text-xs tracking-wide text-text/70">service</p>
+            <p class="text-lg font-semibold">vendor + staff assignment</p>
+            <p class="text-sm text-text/70 leading-relaxed">
+              structured assignment of vendors and staff to execution roles.
+              accountability tracked per assignment.
+            </p>
+          </div>
+
+          <div class="border border-border p-6 space-y-3">
+            <p class="text-xs tracking-wide text-text/70">service</p>
+            <p class="text-lg font-semibold">live event execution</p>
+            <p class="text-sm text-text/70 leading-relaxed">
+              setup through teardown. checkpoint-based execution.
+              issues logged in real time.
+            </p>
+          </div>
+
+          <div class="border border-border p-6 space-y-3">
+            <p class="text-xs tracking-wide text-text/70">service</p>
+            <p class="text-lg font-semibold">evidence + milestone capture</p>
+            <p class="text-sm text-text/70 leading-relaxed">
+              photos and notes captured at each execution phase.
+              evidence attached to the event record.
+            </p>
+          </div>
+
+          <div class="border border-border p-6 space-y-3">
+            <p class="text-xs tracking-wide text-text/70">service</p>
+            <p class="text-lg font-semibold">settlement + close</p>
+            <p class="text-sm text-text/70 leading-relaxed">
+              final payment collected and recorded.
+              event record issued on close.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-24 border-t border-border">
+      <div class="mx-auto max-w-content px-4 sm:px-6">
+        <div class="max-w-3xl">
+          <h2 class="text-3xl font-semibold">plan your event</h2>
+
+          <p class="mt-6 text-muted leading-relaxed">
+            Submit your event details — date, venue, guest count, and coordination requirements.
+            Requests are reviewed and confirmed based on date availability and scope fit.
+          </p>
+
+          <p class="mt-4 text-muted leading-relaxed">
+            A full execution record is maintained from booking through close. Evidence captured at each phase.
+          </p>
+
+          <div class="mt-10">
+            <RequestIntake />
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</OperatorLayout>

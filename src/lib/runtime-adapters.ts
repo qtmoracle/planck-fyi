@@ -51,6 +51,7 @@ export interface SESRuntimeAdapter {
 
 const FALLBACK_SURFACE = "surface-navigator";
 const ACTIVE_DETAILING_SURFACE = "auto-detailing";
+const ACTIVE_LANDSCAPING_SURFACE = "landscaping";
 
 function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -273,9 +274,176 @@ export const autoDetailingAdapter: SESRuntimeAdapter = {
   },
 };
 
+function normalizePropertyType(value: unknown): "residential" | "commercial" | "unknown" {
+  const raw = (asString(value) || "").toLowerCase();
+  if (["residential", "home", "house", "property"].includes(raw)) return "residential";
+  if (["commercial", "business", "office", "complex"].includes(raw)) return "commercial";
+  return "unknown";
+}
+
+function normalizeLandscapingScope(
+  value: unknown
+): "mow" | "trim" | "edge" | "full" | "custom" | "unspecified" {
+  const raw = (asString(value) || "").toLowerCase();
+  if (raw.includes("full") || raw.includes("complete")) return "full";
+  if (raw.includes("mow")) return "mow";
+  if (raw.includes("trim")) return "trim";
+  if (raw.includes("edge")) return "edge";
+  if (raw.includes("custom")) return "custom";
+  if (!raw) return "unspecified";
+  return "custom";
+}
+
+const LANDSCAPING_EVENT_MAP: Record<string, string> = {
+  intake_created: "landscaping_request_received",
+  intake_approved: "landscaping_request_approved",
+  job_created: "landscaping_job_scheduled",
+  job_claimed: "crew_assigned",
+  service_started: "landscaping_arrival_confirmed",
+  service_start: "landscaping_arrival_confirmed",
+  service_update: "landscaping_in_progress",
+  service_progress: "landscaping_in_progress",
+  photo_capture: "landscaping_media_captured",
+  service_complete: "landscaping_complete",
+  payment_recorded: "payment_confirmed",
+  payment_collected: "payment_confirmed",
+  closeout: "landscaping_closeout_complete",
+};
+
+export const landscapingAdapter: SESRuntimeAdapter = {
+  identity: {
+    surface: ACTIVE_LANDSCAPING_SURFACE,
+    adapter_name: "landscaping-runtime-adapter",
+    status: "active",
+  },
+
+  interpretIntakePayload({ payload }) {
+    const obj = asObject(payload);
+    const propertyRaw = firstString(obj, ["property", "property_type", "propertyType", "type"]);
+    const scopeRaw = firstString(obj, ["scope", "service", "service_type", "serviceType", "requested_scope"]);
+    const notesRaw = firstString(obj, ["notes", "request_text", "requestText", "description"]);
+    const addressRaw = firstString(obj, ["address", "location", "service_address", "serviceAddress"]);
+
+    return {
+      normalized_payload: {
+        property: {
+          type: normalizePropertyType(propertyRaw),
+        },
+        service: {
+          scope: normalizeLandscapingScope(scopeRaw),
+        },
+        request_context: {
+          notes: notesRaw,
+          address: addressRaw,
+        },
+        raw: obj,
+      },
+    };
+  },
+
+  interpretJobPayload({ payload }) {
+    const intake = this.interpretIntakePayload({
+      surface: ACTIVE_LANDSCAPING_SURFACE,
+      payload,
+    });
+
+    return {
+      normalized_payload: {
+        job_type: "on-site-landscaping",
+        property: asObject(intake.normalized_payload).property ?? { type: "unknown" },
+        service: asObject(intake.normalized_payload).service ?? { scope: "unspecified" },
+        execution_context: {
+          on_site: true,
+        },
+        raw: asObject(intake.normalized_payload).raw ?? asObject(payload),
+      },
+      notes: intake.notes,
+    };
+  },
+
+  interpretServiceEvent({ event_type, payload }) {
+    return {
+      semantic_event_type: LANDSCAPING_EVENT_MAP[event_type] || event_type || "landscaping_event",
+      normalized_payload: payload,
+    };
+  },
+
+  composeRecord({ job, events }) {
+    const interpretedJob = this.interpretJobPayload({
+      surface: ACTIVE_LANDSCAPING_SURFACE,
+      payload: asObject(job).payload ?? job,
+    });
+
+    const semanticTimeline = (events || []).map((event) => {
+      const eventObj = asObject(event);
+      const eventType = getEventType(event);
+      const interpreted = this.interpretServiceEvent({
+        surface: ACTIVE_LANDSCAPING_SURFACE,
+        event_type: eventType,
+        payload: eventObj.payload ?? eventObj,
+      });
+
+      return {
+        event_type: eventType,
+        semantic_event_type: interpreted.semantic_event_type,
+        payload: interpreted.normalized_payload,
+      };
+    });
+
+    const property = asObject(interpretedJob.normalized_payload).property ?? { type: "unknown" };
+    const service = asObject(interpretedJob.normalized_payload).service ?? { scope: "unspecified" };
+    const completed = semanticTimeline.some(
+      (event) => event.semantic_event_type === "landscaping_complete"
+    );
+
+    const summary = completed
+      ? "Landscaping service completed. Property maintained according to scope. Final condition verified with photo documentation."
+      : "Landscaping request recorded. Service activity captured in the execution timeline.";
+
+    return {
+      summary,
+      payload: {
+        property,
+        service,
+        execution: {
+          completed,
+          notes: completed
+            ? "Service completion captured from SES event history."
+            : "Limited completion data available.",
+        },
+        timeline: semanticTimeline,
+      },
+    };
+  },
+
+  composeSummary({ events }) {
+    const semanticTimeline = (events || []).map((event) =>
+      this.interpretServiceEvent({
+        surface: ACTIVE_LANDSCAPING_SURFACE,
+        event_type: getEventType(event),
+        payload: asObject(event).payload ?? event,
+      }).semantic_event_type
+    );
+
+    if (semanticTimeline.includes("landscaping_complete")) {
+      return "Landscaping service completed and ready for review.";
+    }
+
+    if (
+      semanticTimeline.includes("landscaping_in_progress") ||
+      semanticTimeline.includes("landscaping_arrival_confirmed")
+    ) {
+      return "Landscaping in progress. Crew is actively servicing the property.";
+    }
+
+    return "Landscaping request captured. Limited service details available.";
+  },
+};
+
 export const runtimeAdapters: Record<string, SESRuntimeAdapter> = {
   [surfaceNavigatorAdapter.identity.surface]: surfaceNavigatorAdapter,
   [autoDetailingAdapter.identity.surface]: autoDetailingAdapter,
+  [landscapingAdapter.identity.surface]: landscapingAdapter,
 };
 
 export function resolveRuntimeAdapter(surface: string | null | undefined): SESRuntimeAdapter {

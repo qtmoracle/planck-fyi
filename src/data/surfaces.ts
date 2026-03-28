@@ -35,6 +35,13 @@ export const surfaces: Surface[] = [
     status: "planned",
     image: "/images/surfaces/pressure-cleaning.svg",
   },
+  {
+    slug: "event-coordination",
+    name: "Event Coordination",
+    description: "Coordination of live time-bound event execution across venue, vendors, staff, and settlement.",
+    status: "live",
+    image: "/images/surfaces/event-coordination.svg",
+  },
 ];
 
 export const surfaceMap: Record<string, Surface> = Object.fromEntries(

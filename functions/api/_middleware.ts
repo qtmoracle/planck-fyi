@@ -9,8 +9,8 @@ function corsHeaders(req: Request): Headers {
   h.set("Access-Control-Allow-Origin", origin);
   h.set("Vary", "Origin");
 
-  // allow the tech token header + standard headers
-  h.set("Access-Control-Allow-Headers", "x-tech-token, content-type, accept");
+  // allow the tech token + agent token headers + standard headers
+  h.set("Access-Control-Allow-Headers", "x-tech-token, x-agent-token, content-type, accept");
   h.set("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
   h.set("Access-Control-Max-Age", "86400");
 

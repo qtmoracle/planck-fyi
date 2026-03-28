@@ -33,6 +33,15 @@ if (!operator) {
           {operator.regionName}
         </p>
         <p class="mt-1 text-xs text-black/30 font-mono" id="job-id-display"></p>
+
+        <!-- Lifecycle Rail -->
+        <div class="mt-5 rounded-2xl border border-black/10 p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">Job Lifecycle</p>
+          <div id="lifecycle-rail" class="flex items-start gap-0 overflow-x-auto pb-1">
+            <!-- rendered by JS after SE status is known -->
+          </div>
+          <p id="lifecycle-next-label" class="mt-3 text-xs text-black/40"></p>
+        </div>
       </header>
 
       <section class="grid gap-6">
@@ -100,6 +109,24 @@ if (!operator) {
             >
               Complete Service
             </button>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-black/10 p-5">
+          <h2 class="text-lg font-medium">Arrival Photo</h2>
+          <p id="arrival-evidence-count" class="mt-2 text-sm text-black/70">Load a job to enable photo capture.</p>
+          <div id="arrival-thumbs" class="mt-3 flex flex-wrap gap-2"></div>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <input id="arrival-file-input" type="file" accept="image/*" class="hidden" />
+            <button
+              id="arrival-capture-btn"
+              type="button"
+              class="rounded-xl border border-black px-4 py-2 text-sm"
+              disabled
+            >
+              Add Arrival Photo
+            </button>
+            <span id="arrival-upload-status" class="text-sm text-black/60"></span>
           </div>
         </div>
 
@@ -254,6 +281,89 @@ if (!operator) {
         jobIdDisplay.textContent = jobId;
       }
 
+      const isEvent = operatorSurface === "event-coordination";
+
+      // ── Surface-specific label overrides ─────────────────────────────────────
+      if (isEvent) {
+        // Button labels
+        const btnMap = {
+          "start-service-btn":    "Start Setup",
+          "complete-service-btn": "Close Event",
+          "load-job-btn":         "Load Event",
+        };
+        for (const [id, label] of Object.entries(btnMap)) {
+          const el = document.getElementById(id);
+          if (el) el.textContent = label;
+        }
+
+        // Tech Access section
+        const techInput = document.getElementById("tech-token");
+        if (techInput) {
+          const sec = techInput.closest(".rounded-2xl");
+          if (sec) {
+            const h2 = sec.querySelector("h2");
+            if (h2) h2.textContent = "Operator Access";
+            const desc = sec.querySelector("p.mt-2");
+            if (desc) desc.textContent = "Enter the operator access token to load event data.";
+          }
+          techInput.placeholder = "Enter operator token";
+        }
+
+        // Job Summary → Event Details
+        const jobSumSec = document.getElementById("job-summary")?.closest(".rounded-2xl");
+        if (jobSumSec) { const h2 = jobSumSec.querySelector("h2"); if (h2) h2.textContent = "Event Details"; }
+
+        // Service Status → Event Status
+        const evtSumSec = document.getElementById("event-summary")?.closest(".rounded-2xl");
+        if (evtSumSec) { const h2 = evtSumSec.querySelector("h2"); if (h2) h2.textContent = "Event Status"; }
+
+        // Payment → Settlement
+        const paySec = document.getElementById("pay-status")?.closest(".rounded-2xl");
+        if (paySec) { const h2 = paySec.querySelector("h2"); if (h2) h2.textContent = "Settlement"; }
+
+        // Completion → Event Closeout; label → Event Summary
+        const completionSec = document.getElementById("completion-summary")?.closest(".rounded-2xl");
+        if (completionSec) {
+          const h2 = completionSec.querySelector("h2");
+          if (h2) h2.textContent = "Event Closeout";
+          const lbl = completionSec.querySelector("label .block, label span.block");
+          if (lbl) lbl.textContent = "Event Summary";
+        }
+        const completionTextarea = document.getElementById("completion-summary");
+        if (completionTextarea) completionTextarea.placeholder = "Summarize the event execution, outcomes, and any notable items.";
+
+        // Service Report → Event Record
+        const reportSec = document.getElementById("service-report")?.closest(".rounded-2xl");
+        if (reportSec) { const h2 = reportSec.querySelector("h2"); if (h2) h2.textContent = "Event Record"; }
+
+        // Lifecycle rail header
+        const railWrap = document.getElementById("lifecycle-rail")?.closest(".rounded-2xl");
+        if (railWrap) { const p = railWrap.querySelector("p"); if (p) p.textContent = "Event Lifecycle"; }
+
+        // Photo section headings and add-photo buttons
+        const arrivalCapBtn = document.getElementById("arrival-capture-btn");
+        if (arrivalCapBtn) {
+          const sec = arrivalCapBtn.closest(".rounded-2xl");
+          const h2 = sec && sec.querySelector("h2");
+          if (h2) h2.textContent = "Vendor Arrival Photo";
+          arrivalCapBtn.textContent = "Add Vendor Arrival Photo";
+        }
+        const beforeCapBtn = document.getElementById("before-capture-btn");
+        if (beforeCapBtn) {
+          const sec = beforeCapBtn.closest(".rounded-2xl");
+          const h2 = sec && sec.querySelector("h2");
+          if (h2) h2.textContent = "Setup Photos";
+          beforeCapBtn.textContent = "Add Setup Photo";
+        }
+        const afterCapBtn = document.getElementById("after-capture-btn");
+        if (afterCapBtn) {
+          const sec = afterCapBtn.closest(".rounded-2xl");
+          const h2 = sec && sec.querySelector("h2");
+          if (h2) h2.textContent = "Post-Event Photos";
+          afterCapBtn.textContent = "Add Post-Event Photo";
+        }
+      }
+
       const TECH_TOKEN_KEY = "planck.tech_token";
 
       const techTokenInput = document.getElementById("tech-token");
@@ -286,9 +396,105 @@ if (!operator) {
       const afterEvidenceCount = document.getElementById("after-evidence-count");
       const afterUploadStatus = document.getElementById("after-upload-status");
 
+      const arrivalFileInput = document.getElementById("arrival-file-input");
+      const arrivalCaptureBtn = document.getElementById("arrival-capture-btn");
+      const arrivalEvidenceCount = document.getElementById("arrival-evidence-count");
+      const arrivalUploadStatus = document.getElementById("arrival-upload-status");
+
       let job = null;
       let serviceEvent = null;
-      const localEvidence = { before: [], after: [] };
+      const localEvidence = { arrival: [], before: [], after: [] };
+
+      // ── Lifecycle rail ────────────────────────────────────────────────────────
+
+      const LIFECYCLE_STEPS = isEvent
+        ? [
+            { key: "queued",      label: "Queued"         },
+            { key: "claimed",     label: "Confirmed"      },
+            { key: "arrived",     label: "Vendor Arrival" },
+            { key: "in_progress", label: "Event Live"     },
+            { key: "evidence",    label: "Breakdown"      },
+            { key: "complete",    label: "Closed"         },
+          ]
+        : [
+            { key: "queued",      label: "Queued"      },
+            { key: "claimed",     label: "Claimed"     },
+            { key: "arrived",     label: "Arrived"     },
+            { key: "in_progress", label: "In Progress" },
+            { key: "evidence",    label: "Evidence"    },
+            { key: "complete",    label: "Complete"    },
+          ];
+
+      const LIFECYCLE_NEXT_LABELS = isEvent ? {
+        queued:      "Awaiting confirmation.",
+        claimed:     "Load event and confirm vendor access.",
+        arrived:     "Begin setup when vendors are ready.",
+        in_progress: "Capture setup and in-progress photos.",
+        evidence:    "Close event and record settlement.",
+        complete:    "Event closed.",
+      } : {
+        queued:      "Waiting to be claimed.",
+        claimed:     "Load job and mark arrival.",
+        arrived:     "Start service when ready.",
+        in_progress: "Capture before photos.",
+        evidence:    "Complete service and record payment.",
+        complete:    "Job complete.",
+      };
+
+      function resolveLifecycleStepFromSE(eventData) {
+        if (!eventData) return "claimed";
+        const status        = eventData.status;
+        const payStatus     = eventData.meta?.payment_status ?? null;
+        const evidenceCount =
+          (eventData.evidence?.arrival?.length ?? 0) +
+          (eventData.evidence?.before?.length ?? 0) +
+          (eventData.evidence?.after?.length ?? 0) +
+          localEvidence.arrival.length +
+          localEvidence.before.length +
+          localEvidence.after.length;
+
+        if (status === "created")     return "arrived";
+        if (status === "in_progress") return evidenceCount > 0 ? "evidence" : "in_progress";
+        if (status === "completed")   return (payStatus === "paid" || payStatus === "waived") ? "complete" : "evidence";
+        return "claimed";
+      }
+
+      function renderLifecycleRail(currentKey) {
+        const rail      = document.getElementById("lifecycle-rail");
+        const nextLabel = document.getElementById("lifecycle-next-label");
+        if (!rail) return;
+
+        const currentIdx = LIFECYCLE_STEPS.findIndex(s => s.key === currentKey);
+
+        rail.innerHTML = LIFECYCLE_STEPS.map((step, idx) => {
+          const isPast    = idx < currentIdx;
+          const isCurrent = idx === currentIdx;
+
+          const dotClass = isCurrent
+            ? "h-2.5 w-2.5 rounded-full bg-black flex-shrink-0"
+            : isPast
+              ? "h-2 w-2 rounded-full bg-black/30 flex-shrink-0"
+              : "h-2 w-2 rounded-full border border-black/20 flex-shrink-0";
+
+          const labelClass = isCurrent
+            ? "text-[11px] font-semibold text-black mt-1.5 whitespace-nowrap"
+            : isPast
+              ? "text-[11px] text-black/30 mt-1.5 whitespace-nowrap"
+              : "text-[11px] text-black/20 mt-1.5 whitespace-nowrap";
+
+          const connector = idx < LIFECYCLE_STEPS.length - 1
+            ? `<div class="h-px flex-1 min-w-[8px] mt-[5px] self-start ${isPast || isCurrent ? "bg-black/20" : "bg-black/08"}"></div>`
+            : "";
+
+          return `<div class="flex flex-col items-center min-w-0"><div class="${dotClass}"></div><span class="${labelClass}">${step.label}</span></div>${connector}`;
+        }).join("");
+
+        if (nextLabel) {
+          nextLabel.textContent = LIFECYCLE_NEXT_LABELS[currentKey] ?? "";
+        }
+      }
+
+      // ── Helpers ───────────────────────────────────────────────────────────────
 
       function escapeHtml(value) {
         return String(value ?? "")
@@ -318,15 +524,15 @@ if (!operator) {
         if (!techTokenStatusEl) return;
 
         techTokenStatusEl.textContent = token
-          ? "TECH token stored for this browser session."
-          : "No TECH token stored yet.";
+          ? (isEvent ? "Operator token stored for this session." : "TECH token stored for this browser session.")
+          : (isEvent ? "No operator token stored yet." : "No TECH token stored yet.");
       }
 
       function renderJob(jobData) {
         if (!jobSummaryEl) return;
 
         if (!jobData) {
-          jobSummaryEl.innerHTML = "<p>Job not loaded.</p>";
+          jobSummaryEl.innerHTML = isEvent ? "<p>Enter access token to load event.</p>" : "<p>Job not loaded.</p>";
           return;
         }
 
@@ -340,8 +546,8 @@ if (!operator) {
 
         jobSummaryEl.innerHTML = `
           <div class="grid gap-2">
-            <p><strong>Job Status:</strong> ${escapeHtml(state.status || "unknown")}</p>
-            <p><strong>Claimed At:</strong> ${escapeHtml(state.claimed_at || "")}</p>
+            <p><strong>${isEvent ? "Event Status" : "Job Status"}:</strong> ${escapeHtml(state.status || "unknown")}</p>
+            <p><strong>${isEvent ? "Confirmed At" : "Claimed At"}:</strong> ${escapeHtml(state.claimed_at || "")}</p>
             <p><strong>Customer:</strong> ${escapeHtml(contact.name || "unknown")}</p>
             <p><strong>Email:</strong> ${escapeHtml(contact.email || "")}</p>
             <p><strong>Phone:</strong> ${escapeHtml(contact.phone || "")}</p>
@@ -357,8 +563,11 @@ if (!operator) {
       function renderServiceEvent(eventData) {
         if (!eventSummaryEl || !startBtn || !completeBtn) return;
 
+        // Keep lifecycle rail in sync with current SE status
+        renderLifecycleRail(resolveLifecycleStepFromSE(eventData));
+
         if (!eventData) {
-          eventSummaryEl.innerHTML = "<p>No ServiceEvent loaded.</p>";
+          eventSummaryEl.innerHTML = isEvent ? "<p>Load an event to begin.</p>" : "<p>No ServiceEvent loaded.</p>";
           startBtn.disabled = true;
           completeBtn.disabled = true;
           return;
@@ -371,7 +580,7 @@ if (!operator) {
             <p><strong>Created:</strong> ${escapeHtml(eventData.timestamps?.created_at || "")}</p>
             <p><strong>Started:</strong> ${escapeHtml(eventData.timestamps?.started_at || "")}</p>
             <p><strong>Completed:</strong> ${escapeHtml(eventData.timestamps?.completed_at || "")}</p>
-            <p><strong>Completion Summary:</strong> ${escapeHtml(
+            <p><strong>${isEvent ? "Event Summary" : "Completion Summary"}:</strong> ${escapeHtml(
               eventData.outcome?.completion_summary || ""
             )}</p>
           </div>
@@ -409,11 +618,14 @@ if (!operator) {
       }
 
       function renderReport() {
+        // Refresh lifecycle rail — evidence counts may have changed
+        if (serviceEvent) renderLifecycleRail(resolveLifecycleStepFromSE(serviceEvent));
+
         const reportEl = document.getElementById("service-report");
         if (!reportEl) return;
 
         if (!job || !serviceEvent) {
-          reportEl.innerHTML = "<p>Load a job to generate a report.</p>";
+          reportEl.innerHTML = isEvent ? "<p>Load an event to generate a record.</p>" : "<p>Load a job to generate a report.</p>";
           return;
         }
 
@@ -427,8 +639,10 @@ if (!operator) {
         const evidence = serviceEvent.evidence || {};
         const meta = serviceEvent.meta || {};
 
+        const arrivalCount = Array.isArray(evidence.arrival) ? evidence.arrival.length : 0;
         const beforeCount = Array.isArray(evidence.before) ? evidence.before.length : 0;
         const afterCount = Array.isArray(evidence.after) ? evidence.after.length : 0;
+        const localArrivalCount = localEvidence.arrival.length;
         const localBeforeCount = localEvidence.before.length;
         const localAfterCount = localEvidence.after.length;
 
@@ -454,6 +668,7 @@ if (!operator) {
           : "";
 
         // Evidence counts: take max of persisted (from serviceEvent) and local in-memory
+        const effectiveArrival = Math.max(arrivalCount, localArrivalCount);
         const effectiveBefore = Math.max(beforeCount, localBeforeCount);
         const effectiveAfter = Math.max(afterCount, localAfterCount);
 
@@ -465,7 +680,7 @@ if (!operator) {
             row("Class", asset.class),
             row("Details", asset.details),
           ])}
-          ${section("Service", [
+          ${section(isEvent ? "Coordination" : "Service", [
             row("Tier", request.tier_id || request.tier),
             row("Area", request.service_area),
           ])}
@@ -476,10 +691,11 @@ if (!operator) {
             row("Summary", outcome.completion_summary),
           ])}
           ${section("Evidence", [
-            row("Before photos", String(effectiveBefore)),
-            row("After photos", String(effectiveAfter)),
+            row(isEvent ? "Vendor arrival photo" : "Arrival photo", String(effectiveArrival)),
+            row(isEvent ? "Setup photos"         : "Before photos",  String(effectiveBefore)),
+            row(isEvent ? "Post-event photos"    : "After photos",   String(effectiveAfter)),
           ])}
-          ${section("Payment", [
+          ${section(isEvent ? "Settlement" : "Payment", [
             row("Status", meta.payment_status),
             row("Amount collected", amountDisplay),
             row("Method", meta.payment_method),
@@ -489,7 +705,7 @@ if (!operator) {
       }
 
       async function renderThumbnails(stage) {
-        const containerId = stage === "before" ? "before-thumbs" : "after-thumbs";
+        const containerId = stage === "arrival" ? "arrival-thumbs" : stage === "before" ? "before-thumbs" : "after-thumbs";
         const container = document.getElementById(containerId);
         if (!container) return;
 
@@ -522,7 +738,7 @@ if (!operator) {
             const img = document.createElement("img");
             img.src = blobUrl;
             img.dataset.blob = "1";
-            img.alt = stage === "before" ? "Before" : "After";
+            img.alt = stage === "arrival" ? "Arrival" : stage === "before" ? "Before" : "After";
             img.className = "h-24 w-24 rounded-xl object-cover border border-black/10";
             container.appendChild(img);
           } catch {
@@ -532,7 +748,7 @@ if (!operator) {
       }
 
       function renderEvidence(stage) {
-        const countEl = stage === "before" ? beforeEvidenceCount : afterEvidenceCount;
+        const countEl = stage === "arrival" ? arrivalEvidenceCount : stage === "before" ? beforeEvidenceCount : afterEvidenceCount;
         if (!countEl) return;
         const count = localEvidence[stage].length;
         countEl.textContent = count === 0
@@ -546,7 +762,7 @@ if (!operator) {
         }
 
         // Map stage to the category enum accepted by /api/upload-url
-        const category = stage === "before" ? "exterior" : "interior";
+        const category = stage === "after" ? "interior" : "exterior";
         const rawExt = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
         const safeName = `${stage}_${Date.now()}.${rawExt || "jpg"}`;
 
@@ -644,7 +860,7 @@ if (!operator) {
           service: {
             surface: String(operatorSurface || "auto-detailing"),
             tier: String(request.tier_id || request.tier || "unknown"),
-            scope_notes: String(notes.condition || ""),
+            scope_notes: String(notes.scope || notes.condition || notes.description || ""),
           },
         };
       }
@@ -764,6 +980,7 @@ if (!operator) {
           techTokenInput.value = existingToken;
         }
 
+        renderLifecycleRail("claimed");
         renderTechTokenStatus();
         renderJob(null);
         renderServiceEvent(null);
@@ -781,8 +998,8 @@ if (!operator) {
       });
 
       loadJobBtn?.addEventListener("click", async () => {
-        if (jobSummaryEl) jobSummaryEl.innerHTML = "<p>Loading job context...</p>";
-        if (eventSummaryEl) eventSummaryEl.innerHTML = "<p>Initializing service event...</p>";
+        if (jobSummaryEl) jobSummaryEl.innerHTML = isEvent ? "<p>Loading event context...</p>" : "<p>Loading job context...</p>";
+        if (eventSummaryEl) eventSummaryEl.innerHTML = isEvent ? "<p>Initializing event record...</p>" : "<p>Initializing service event...</p>";
         startBtn.disabled = true;
         completeBtn.disabled = true;
         if (beforeCaptureBtn) beforeCaptureBtn.disabled = true;
@@ -800,10 +1017,13 @@ if (!operator) {
           serviceEvent = await createOrLoadServiceEvent(job);
           renderServiceEvent(serviceEvent);
 
+          if (arrivalCaptureBtn) arrivalCaptureBtn.disabled = false;
           if (beforeCaptureBtn) beforeCaptureBtn.disabled = false;
           if (afterCaptureBtn) afterCaptureBtn.disabled = false;
+          renderEvidence("arrival");
           renderEvidence("before");
           renderEvidence("after");
+          renderThumbnails("arrival");
           renderThumbnails("before");
           renderThumbnails("after");
 
@@ -817,8 +1037,8 @@ if (!operator) {
           if (jobSummaryEl) jobSummaryEl.innerHTML = `<p>Error: ${escapeHtml(message)}</p>`;
           if (eventSummaryEl) {
             eventSummaryEl.innerHTML = job
-              ? `<p>Service event error: ${escapeHtml(message)}</p>`
-              : `<p>Job blocked — service event not created.</p>`;
+              ? `<p>${isEvent ? "Event record error" : "Service event error"}: ${escapeHtml(message)}</p>`
+              : `<p>${isEvent ? "Event blocked — record not created." : "Job blocked — service event not created."}</p>`;
           }
         }
       });
@@ -843,7 +1063,7 @@ if (!operator) {
       completeBtn?.addEventListener("click", async () => {
         if (!serviceEvent?.id) return;
 
-        if (!confirm("Mark this job as complete? This cannot be undone.")) return;
+        if (!confirm(isEvent ? "Close this event? This cannot be undone." : "Mark this job as complete? This cannot be undone.")) return;
 
         completeBtn.disabled = true;
 
@@ -934,6 +1154,7 @@ if (!operator) {
         }
       });
 
+      arrivalCaptureBtn?.addEventListener("click", () => arrivalFileInput?.click());
       beforeCaptureBtn?.addEventListener("click", () => beforeFileInput?.click());
       afterCaptureBtn?.addEventListener("click", () => afterFileInput?.click());
 
@@ -978,6 +1199,28 @@ if (!operator) {
         } finally {
           afterCaptureBtn.disabled = false;
           afterFileInput.value = "";
+        }
+      });
+
+      arrivalFileInput?.addEventListener("change", async () => {
+        const file = arrivalFileInput.files?.[0];
+        if (!file || !job || !serviceEvent) return;
+        arrivalCaptureBtn.disabled = true;
+        if (arrivalUploadStatus) arrivalUploadStatus.textContent = "Uploading…";
+        let item;
+        try {
+          item = await uploadPhoto(file, "arrival");
+          renderEvidence("arrival");
+          if (arrivalUploadStatus) arrivalUploadStatus.textContent = "Saving…";
+          serviceEvent = await persistEvidence(serviceEvent.id, "arrival", item);
+          await renderThumbnails("arrival");
+          if (arrivalUploadStatus) arrivalUploadStatus.textContent = "Saved.";
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "upload_error";
+          if (arrivalUploadStatus) arrivalUploadStatus.textContent = `Error: ${escapeHtml(msg)}`;
+        } finally {
+          arrivalCaptureBtn.disabled = false;
+          arrivalFileInput.value = "";
         }
       });
 

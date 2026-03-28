@@ -17,7 +17,19 @@ if (!operator) {
 }
 
 const OperatorTemplate = getOperatorTemplate(operator.template, operator.surface);
+const accessState = operator.accessState;
 ---
+
+{accessState === "suspended" && (
+  <div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:12px 20px;font-size:14px;color:#991b1b;text-align:center;">
+    This operator account is suspended. Execution is blocked. Contact support.
+  </div>
+)}
+{accessState === "limited" && (
+  <div style="background:#fffbeb;border-bottom:1px solid #fde68a;padding:12px 20px;font-size:14px;color:#92400e;text-align:center;">
+    This operator account is in limited mode. Some operations may be restricted.
+  </div>
+)}
 
 {OperatorTemplate ? (
   <OperatorTemplate operator={operator} />

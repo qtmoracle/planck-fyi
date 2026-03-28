@@ -1,4 +1,5 @@
 // functions/admin/job/create/[id].ts
+import { evaluateAccess, denyResponse } from "../../../../src/lib/access/index";
 // Planck Surface Engineers — Job Bridge (UI→Writer) v0.01
 //
 // Route: POST /admin/job/create/:id
@@ -30,6 +31,25 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
     const body = await request.json().catch(() => null);
     const assignedTo = body?.assigned_to ? String(body.assigned_to).trim() : "qtm-detailing";
+
+    // Access gate: job creation allowed for active + limited operators
+    const jobAccessDecision = evaluateAccess({
+      actor: { type: "admin", id: "admin" }, // admin creates jobs; operator access checked via assigned_to
+      action: "job_create",
+      resource: { type: "job", assigned_to: assignedTo },
+    });
+    // Also check the target operator's accessState — suspended operators cannot receive new jobs
+    const operatorAccessDecision = evaluateAccess({
+      actor: { type: "operator", id: assignedTo, operator_slug: assignedTo },
+      action: "job_create",
+      resource: { type: "job", assigned_to: assignedTo },
+    });
+    if (!operatorAccessDecision.allow && operatorAccessDecision.reasons[0] === "operator_suspended") {
+      return new Response(JSON.stringify({ ok: false, error: "operator_suspended" }), {
+        status: 403,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
 
     // 2) R2 binding
     const bucket = env?.INTAKE_BUCKET;

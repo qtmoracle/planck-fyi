@@ -1,3 +1,5 @@
+import { evaluateAccess, denyResponse } from "../../src/lib/access/index";
+
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
     const { request, env } = ctx;
@@ -5,6 +7,21 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     // @ts-ignore
     const bucket: R2Bucket = env.INTAKE_BUCKET;
     if (!bucket) return json({ ok: false, error: "missing_r2_binding" }, 500);
+
+    // Access gate: intake requires active operator
+    // Resolve operator slug from source.operator_slug in packet (parsed below),
+    // but we must peek at it before full validation.
+    // We do a lightweight pre-check using the x-operator-slug header if present,
+    // then re-validate after packet parsing.
+    const headerSlug = request.headers.get("x-operator-slug") || "";
+    if (headerSlug) {
+      const headerDecision = evaluateAccess({
+        actor: { type: "operator", id: headerSlug, operator_slug: headerSlug },
+        action: "intake_submit",
+        resource: { type: "intake", owner_operator_slug: headerSlug },
+      });
+      if (!headerDecision.allow) return denyResponse(headerDecision);
+    }
 
     const RESEND_API_KEY = String(env.RESEND_API_KEY || "");
     const RESEND_FROM = String(env.RESEND_FROM || "");
@@ -64,6 +81,17 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
     if (photoCheckRequired && exterior.length < 2) return json({ ok: false, error: "missing_photos_exterior" }, 400);
     if (photoCheckRequired && interior.length < 2) return json({ ok: false, error: "missing_photos_interior" }, 400);
+
+    // Access gate: enforce on resolved operator slug from packet source
+    const packetOperatorSlug = String(packet?.source?.operator_slug || headerSlug).trim();
+    if (packetOperatorSlug) {
+      const packetDecision = evaluateAccess({
+        actor: { type: "operator", id: packetOperatorSlug, operator_slug: packetOperatorSlug },
+        action: "intake_submit",
+        resource: { type: "intake", owner_operator_slug: packetOperatorSlug },
+      });
+      if (!packetDecision.allow) return denyResponse(packetDecision);
+    }
 
     // Write canonical packet (system of record)
     const packetKey = `planck/intake_packets/INTAKE_PACKET_v0.01/${id}.json`;

@@ -34,7 +34,13 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       );
     }
 
-    // 2) Parse optional body: { notes?: string }
+    // 2) Require operator identity
+    const operatorSlug = String(request.headers.get("x-operator-slug") || "").trim();
+    if (!operatorSlug) {
+      return json({ ok: false, error: "missing_operator_slug", hint: "x-operator-slug header is required" }, 400);
+    }
+
+    // 3) Parse optional body: { notes?: string }
     let body: any = null;
     try {
       const txt = await request.text();
@@ -44,7 +50,7 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     }
     const notes = body && typeof body.notes === "string" ? body.notes : "";
 
-    // 3) Find most recent active job state
+    // 4) Find most recent active job state assigned to this operator
     const listed = await bucket.list({ prefix: JOB_STATE_PREFIX, limit: 1000 });
     const keys: string[] = (listed?.objects || [])
       .map((o: any) => String(o?.key || ""))
@@ -58,6 +64,8 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
       const status = String(st?.status || "").toLowerCase();
       if (status !== "active") continue;
+
+      if (st?.assigned_to !== operatorSlug) continue;
 
       const t = Date.parse(String(st?.claimed_at || st?.last_updated_at || st?.queued_at || ""));
       if (!Number.isFinite(t)) continue;

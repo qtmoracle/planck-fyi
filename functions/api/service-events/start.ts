@@ -4,6 +4,7 @@ import {
   putServiceEvent,
   jsonResponse,
 } from "../../../src/lib/service-events";
+import { evaluateAccess, denyResponse } from "../../../src/lib/access/index";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
@@ -19,6 +20,17 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     const service_event_id = String((body as any).service_event_id || "").trim();
     if (!service_event_id) {
       return jsonResponse({ ok: false, error: "missing_service_event_id" }, 400);
+    }
+
+    // Access gate: service event mutation requires active operator
+    const operatorSlug = request.headers.get("x-operator-slug") || "";
+    if (operatorSlug) {
+      const accessDecision = evaluateAccess({
+        actor: { type: "operator", id: operatorSlug, operator_slug: operatorSlug },
+        action: "service_event_mutate",
+        resource: { type: "service_event", assigned_to: operatorSlug },
+      });
+      if (!accessDecision.allow) return denyResponse(accessDecision);
     }
 
     const event = await getServiceEvent(bucket, service_event_id);

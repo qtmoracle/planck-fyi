@@ -5,6 +5,7 @@ import {
   jsonResponse,
 } from "../../../src/lib/service-events";
 import type { CreateServiceEventInput } from "../../../src/lib/service-events";
+import { evaluateAccess, denyResponse } from "../../../src/lib/access/index";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
@@ -28,6 +29,14 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     if (!request_id || !operator_id) {
       return jsonResponse({ ok: false, error: "missing_required_fields" }, 400);
     }
+
+    // Access gate: service event creation requires active operator only
+    const accessDecision = evaluateAccess({
+      actor: { type: "operator", id: operator_id, operator_slug: operator_id },
+      action: "service_event_mutate",
+      resource: { type: "service_event", owner_operator_slug: operator_id, assigned_to: operator_id },
+    });
+    if (!accessDecision.allow) return denyResponse(accessDecision);
 
     // Idempotent: return existing service event for this job if one already exists.
     const existing = await getServiceEventByJobId(bucket, job_id);

@@ -120,6 +120,19 @@ if (!operator) {
           <div id="agent-routing-log" class="text-sm text-black/40">Loading…</div>
         </div>
 
+        <!-- --- PROPOSED ACTIONS START --- -->
+        <div class="rounded-2xl border border-black/10 p-5">
+          <div class="flex items-baseline justify-between mb-4">
+            <p class="text-xs font-semibold uppercase tracking-widest text-black/30">Proposed Actions</p>
+            <span class="text-xs text-black/20">v0.01 · read-only</span>
+          </div>
+          <div id="proposed-actions-list" class="grid gap-2">
+            <!-- rendered by JS -->
+          </div>
+          <p id="proposed-actions-status" class="mt-2 text-xs text-black/30 min-h-[1em]"></p>
+        </div>
+        <!-- --- PROPOSED ACTIONS END --- -->
+
         <!-- Token -->
         <div class="rounded-2xl border border-black/10 p-5">
           <p class="text-xs font-semibold uppercase tracking-widest text-black/30 mb-3">TECH Token</p>
@@ -1051,9 +1064,288 @@ if (!operator) {
           row("Completed",             completedDisplay);
       }
 
+      // ── Proposed Actions ──────────────────────────────────────────────────────
+
+      // In-memory state: intent_id → { decision, reviewed_by, reviewed_at, note?, executed?, exec_result? }
+      const _reviewedIntents = {};
+
+      // Action Surface allowlist (mirrors src/lib/actions/registry.ts)
+      const ACTION_SURFACE = new Set([
+        "create_admin_followup",
+        "create_operator_followup",
+        "flag_job_for_review",
+        "attach_advisory_note",
+        "queue_assignment_review",
+      ]);
+
+      function renderIntentCard(intent) {
+        const agentToken = getAgentToken();
+        const time = intent.created_at
+          ? new Date(intent.created_at).toLocaleString(undefined, {
+              month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+            })
+          : "—";
+        const target = [
+          intent.target?.type,
+          intent.target?.id ? `#${intent.target.id}` : "",
+          intent.target?.operator_slug ? `· ${intent.target.operator_slug}` : "",
+        ].filter(Boolean).join(" ");
+        const reasons = Array.isArray(intent.reasons) ? intent.reasons.join(" · ") : "";
+
+        const localState  = _reviewedIntents[intent.id];
+        const currentMode = localState?.executed ? "executed"
+                          : localState?.decision ? localState.decision
+                          : (intent.review ? intent.review.status : intent.mode);
+
+        const modeColor = currentMode === "approved"  ? "color:#166534"
+                        : currentMode === "executed"  ? "color:#1d4ed8"
+                        : currentMode === "denied"    ? "color:#991b1b"
+                        :                               "";
+        const modeDot   = currentMode === "approved"  ? "bg-green-600"
+                        : currentMode === "executed"  ? "bg-blue-600"
+                        : currentMode === "denied"    ? "bg-red-600"
+                        :                               "bg-black/20";
+
+        const reviewMeta = localState || intent.review;
+        const reviewLine = reviewMeta && !localState?.executed
+          ? `<p class="text-[11px] mt-1" style="${modeColor}">
+               ${esc(reviewMeta.decision || reviewMeta.status || currentMode)}
+               · by ${esc(reviewMeta.reviewed_by)}
+               · ${new Date(reviewMeta.reviewed_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+               ${reviewMeta.note ? `<span class="text-black/30">· "${esc(reviewMeta.note)}"</span>` : ""}
+             </p>`
+          : "";
+
+        // Executed state display
+        const execResult = localState?.exec_result;
+        const executedLine = localState?.executed
+          ? `<p class="text-[11px] mt-1" style="color:#1d4ed8">
+               executed · by ${esc(reviewMeta?.reviewed_by || "—")}
+               ${execResult?.metadata?.log_key ? `<span class="text-black/30">· key: ${esc(String(execResult.metadata.log_key).split("/").pop())}</span>` : ""}
+             </p>`
+          : "";
+        const execFailLine = localState?.exec_failed
+          ? `<p class="text-[11px] mt-1 text-red-500">execution failed · ${esc(localState.exec_reason || "unknown")}</p>`
+          : "";
+
+        // Approve/Deny controls: only when proposed
+        const showReviewControls = agentToken && currentMode === "proposed";
+        const reviewControls = showReviewControls
+          ? `<div class="flex items-center gap-2 mt-2 pt-2 border-t border-black/06">
+               <input
+                 id="reviewer-name-${esc(intent.id)}"
+                 type="text"
+                 placeholder="Your name"
+                 class="flex-1 min-w-0 rounded-lg border border-black/15 px-2 py-1 text-xs"
+               />
+               <button type="button"
+                 data-intent-id="${esc(intent.id)}" data-review-decision="approved"
+                 class="rounded-lg border border-black/20 px-2.5 py-1 text-xs text-black/60 hover:border-green-600 hover:text-green-700 transition-colors"
+               >Approve</button>
+               <button type="button"
+                 data-intent-id="${esc(intent.id)}" data-review-decision="denied"
+                 class="rounded-lg border border-black/20 px-2.5 py-1 text-xs text-black/60 hover:border-red-600 hover:text-red-700 transition-colors"
+               >Deny</button>
+             </div>`
+          : "";
+
+        // Execute button: only when approved AND action is in Action Surface AND not yet executed
+        const isExecutable = ACTION_SURFACE.has(intent.action);
+        const showExecute  = agentToken && currentMode === "approved" && isExecutable && !localState?.executed;
+        const executeControl = showExecute
+          ? `<div class="flex items-center gap-2 mt-2 pt-2 border-t border-black/06">
+               <button type="button"
+                 data-intent-id="${esc(intent.id)}" data-execute="true"
+                 class="rounded-lg border border-black/20 px-2.5 py-1 text-xs text-black/60 hover:border-blue-600 hover:text-blue-700 transition-colors"
+               >Execute →</button>
+               <span class="text-[11px] text-black/25">approved · ${esc(intent.action)}</span>
+             </div>`
+          : "";
+
+        return `<div class="rounded-xl border border-black/08 px-4 py-3 grid gap-1" data-intent-card="${esc(intent.id)}">
+          <div class="flex items-baseline justify-between gap-3">
+            <span class="text-xs font-mono font-medium text-black/70">${esc(intent.action || "—")}</span>
+            <span class="text-[10px] text-black/25 whitespace-nowrap">${esc(time)}</span>
+          </div>
+          <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-black/40">
+            <span>agent: ${esc(intent.agent_id || "—")}</span>
+            <span>target: ${esc(target || "—")}</span>
+            <span class="inline-flex items-center gap-1">
+              <span class="inline-block w-1.5 h-1.5 rounded-full ${modeDot}"></span>
+              <span style="${modeColor}">${esc(currentMode)}</span>
+            </span>
+          </div>
+          ${reasons ? `<p class="text-[11px] text-black/30 mt-0.5">${esc(reasons)}</p>` : ""}
+          ${reviewLine}
+          ${executedLine}
+          ${execFailLine}
+          ${reviewControls}
+          ${executeControl}
+        </div>`;
+      }
+
+      async function submitReview(intentId, decision) {
+        const agentToken = getAgentToken();
+        if (!agentToken) return;
+
+        const nameInput  = document.getElementById(`reviewer-name-${intentId}`);
+        const reviewedBy = String(nameInput?.value || "").trim();
+        if (!reviewedBy) {
+          if (nameInput) { nameInput.placeholder = "Name required"; nameInput.focus(); }
+          return;
+        }
+
+        const card = document.querySelector(`[data-intent-card="${intentId}"]`);
+        const btns = card ? card.querySelectorAll("[data-review-decision]") : [];
+        btns.forEach(b => { b.disabled = true; b.style.opacity = "0.5"; });
+
+        try {
+          const res  = await fetch("/api/orchestration/review", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-agent-token": agentToken },
+            body: JSON.stringify({ intent_id: intentId, decision, reviewed_by: reviewedBy }),
+          });
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok || !data?.ok) {
+            btns.forEach(b => { b.disabled = false; b.style.opacity = ""; });
+            const statusEl = document.getElementById("proposed-actions-status");
+            if (statusEl) statusEl.textContent = `Review failed: ${esc(data?.error || String(res.status))}`;
+            return;
+          }
+
+          _reviewedIntents[intentId] = {
+            decision,
+            reviewed_by: reviewedBy,
+            reviewed_at: new Date().toISOString(),
+          };
+
+          loadProposedActions();
+
+        } catch {
+          btns.forEach(b => { b.disabled = false; b.style.opacity = ""; });
+        }
+      }
+
+      async function submitExecute(intentId) {
+        const agentToken = getAgentToken();
+        if (!agentToken) return;
+
+        const card = document.querySelector(`[data-intent-card="${intentId}"]`);
+        const btn  = card ? card.querySelector("[data-execute]") : null;
+        if (btn) { btn.disabled = true; btn.textContent = "Executing…"; }
+
+        try {
+          const res  = await fetch("/api/orchestration/execute", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-agent-token": agentToken },
+            body: JSON.stringify({ intent_id: intentId }),
+          });
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok || !data?.ok) {
+            if (btn) { btn.disabled = false; btn.textContent = "Execute →"; }
+            // Record failure state
+            _reviewedIntents[intentId] = {
+              ..._reviewedIntents[intentId],
+              exec_failed: true,
+              exec_reason: data?.reason || data?.error || String(res.status),
+            };
+            loadProposedActions();
+            return;
+          }
+
+          // Record executed state with result
+          _reviewedIntents[intentId] = {
+            ..._reviewedIntents[intentId],
+            executed:    true,
+            exec_result: data,
+          };
+
+          loadProposedActions();
+
+        } catch {
+          if (btn) { btn.disabled = false; btn.textContent = "Execute →"; }
+        }
+      }
+
+      async function loadProposedActions() {
+        const el       = document.getElementById("proposed-actions-list");
+        const statusEl = document.getElementById("proposed-actions-status");
+        const agentToken = getAgentToken();
+
+        function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+
+        if (!agentToken) {
+          if (el) el.innerHTML = `<p class="text-xs text-black/25 italic">Set planck.agent_token to view proposed actions.</p>`;
+          return;
+        }
+
+        try {
+          const res  = await fetch("/api/orchestration/intents", {
+            method: "GET",
+            headers: { accept: "application/json", "x-agent-token": agentToken },
+          });
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok || !data?.ok) {
+            if (el) el.innerHTML = `<p class="text-xs text-black/25 italic">Unable to load proposed actions.</p>`;
+            return;
+          }
+
+          // Flatten all intents across log entries, take most recent 10
+          const allIntents = [];
+          for (const entry of (data.entries || [])) {
+            for (const intent of (entry.intents || [])) {
+              allIntents.push(intent);
+            }
+          }
+          const recent = allIntents.slice(0, 10);
+
+          if (!recent.length) {
+            if (el) el.innerHTML = `<p class="text-xs text-black/25 italic">No proposed actions yet.</p>`;
+            setStatus("");
+            return;
+          }
+
+          if (el) {
+            el.innerHTML = recent.map(renderIntentCard).join("");
+
+            // Attach review button listeners
+            el.querySelectorAll("[data-review-decision]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const intentId = btn.dataset.intentId;
+                const decision  = btn.dataset.reviewDecision;
+                if (intentId && decision) submitReview(intentId, decision);
+              });
+            });
+
+            // Attach execute button listeners
+            el.querySelectorAll("[data-execute]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const intentId = btn.dataset.intentId;
+                if (intentId) submitExecute(intentId);
+              });
+            });
+          }
+
+          const proposedCount = recent.filter(i => {
+            const local = _reviewedIntents[i.id];
+            return !local && i.mode === "proposed" && !i.review;
+          }).length;
+          setStatus(proposedCount > 0
+            ? `${proposedCount} pending review`
+            : `${recent.length} action${recent.length === 1 ? "" : "s"}`);
+
+        } catch {
+          if (el) el.innerHTML = `<p class="text-xs text-black/25 italic">Unable to load proposed actions.</p>`;
+        }
+      }
+
       reload();
       setInterval(reload, 20000);
       loadAgentRoutingLog();
+      loadProposedActions();
     </script>
   </body>
 </html>

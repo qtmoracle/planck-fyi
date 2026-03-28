@@ -1,0 +1,656 @@
+---
+const PHOTO_POLICY = {
+  requiredMin: 4,
+  requiredExterior: 2,
+  requiredInterior: 2,
+};
+
+const ENDPOINTS = {
+  uploadUrl: "/api/upload-url",
+  submit: "/api/submit",
+};
+
+const DRAFT_KEY = "planck_event_intake_draft_v0_01";
+
+// tier_id values must be in backend allowlist: maintenance | correction | reset | recommend | ""
+const TIER_MAP_SERVER = {
+  "Full Coordination":       "reset",        // most comprehensive scope
+  "Day-Of Coordination":    "correction",   // execution-day scope
+  "Vendor Management Only": "maintenance",  // scoped/ongoing support
+  "Consultation":           "recommend",    // advisory, no commitment
+};
+---
+
+<section id="request" class="scroll-mt-24">
+  <div class="rounded-2xl border border-border bg-surface p-4 sm:p-6 md:p-10">
+    <div class="max-w-[76ch]">
+      <h2 class="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
+        Plan Your Event
+      </h2>
+
+      <p class="mt-3 text-muted leading-relaxed">
+        Submit your event details for review. Requests are evaluated by date, venue, scope, and
+        capacity. If confirmed, you'll receive a coordination brief and next steps.
+      </p>
+
+      <div class="mt-6 rounded-xl border border-border bg-bg/40 p-4">
+        <p class="text-sm text-muted leading-relaxed">
+          <span class="text-text font-medium">Important:</span>
+          this form saves a private draft on your device. <span class="text-text font-medium">Nothing is submitted</span>
+          until you select <span class="text-text font-medium">Submit for Review</span>.
+        </p>
+
+        <p class="mt-3 text-sm text-muted leading-relaxed">
+          <span class="text-text font-medium">Approval gate:</span>
+          Submitting is a request, not a booking confirmation. Availability is confirmed by date and scope.
+        </p>
+      </div>
+    </div>
+
+    <form
+      id="planck-intake"
+      class="mt-8 grid gap-6"
+      data-draft-key={DRAFT_KEY}
+      data-upload-url={ENDPOINTS.uploadUrl}
+      data-submit-url={ENDPOINTS.submit}
+      data-required-exterior={String(PHOTO_POLICY.requiredExterior)}
+      data-required-interior={String(PHOTO_POLICY.requiredInterior)}
+      data-required-min={String(PHOTO_POLICY.requiredMin)}
+      data-tier-map={JSON.stringify(TIER_MAP_SERVER)}
+    >
+      <input type="hidden" name="intake_id" />
+
+      <!-- Contact -->
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Name</span>
+          <input
+            required
+            name="name"
+            autocomplete="name"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="First + last"
+          />
+        </label>
+
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Preferred contact</span>
+          <select
+            required
+            name="contact_method"
+            id="contact_method"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            <option value="">Select…</option>
+            <option value="Email">Email</option>
+            <option value="Text">Text</option>
+            <option value="Call">Call</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Email</span>
+          <input
+            required
+            type="email"
+            name="email"
+            autocomplete="email"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="you@domain.com"
+          />
+        </label>
+
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Phone (required for text/call)</span>
+          <input
+            id="phone"
+            name="phone"
+            inputmode="tel"
+            autocomplete="tel"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="(optional if email)"
+          />
+        </label>
+      </div>
+
+      <!-- Event Details -->
+      <div class="grid gap-4 md:grid-cols-3">
+        <label class="grid gap-2 md:col-span-1">
+          <span class="text-sm text-muted">Event type</span>
+          <select
+            required
+            name="asset_class"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            <option value="">Select…</option>
+            <option>Wedding / Ceremony</option>
+            <option>Banquet / Gala</option>
+            <option>Corporate Event</option>
+            <option>Birthday / Social</option>
+            <option>Other</option>
+          </select>
+        </label>
+
+        <label class="grid gap-2 md:col-span-2">
+          <span class="text-sm text-muted">Venue name / location</span>
+          <input
+            required
+            name="asset_details"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="e.g., The Biltmore Hotel, Coral Gables"
+          />
+        </label>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Coordination package</span>
+          <select
+            required
+            name="tier"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            <option value="">Select…</option>
+            <option>Full Coordination</option>
+            <option>Day-Of Coordination</option>
+            <option>Vendor Management Only</option>
+            <option>Consultation</option>
+          </select>
+        </label>
+
+        <label class="grid gap-2">
+          <span class="text-sm text-muted">Event area / city</span>
+          <input
+            required
+            name="service_area"
+            class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+            placeholder="Miami / Coral Gables / Fort Lauderdale / etc."
+          />
+        </label>
+      </div>
+
+      <label class="grid gap-2">
+        <span class="text-sm text-muted">Preferred event date <span class="text-text/50">(or date range)</span></span>
+        <input
+          name="preferred_days"
+          class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="e.g., March 15 2026 or April/May weekends"
+        />
+      </label>
+
+      <label class="grid gap-2">
+        <span class="text-sm text-muted">Event description &amp; requirements</span>
+        <textarea
+          required
+          name="condition_notes"
+          rows="5"
+          class="w-full rounded-xl border border-border bg-bg p-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="Guest count, estimated timeline, vendors needed (catering, music, décor), any known constraints, etc."
+        ></textarea>
+      </label>
+
+      <label class="grid gap-2">
+        <span class="text-sm text-muted">Venue access notes <span class="text-text/50">(optional)</span></span>
+        <input
+          name="access_notes"
+          class="h-11 w-full rounded-xl border border-border bg-bg px-4 text-text outline-none focus:ring-2 focus:ring-accent/30"
+          placeholder="Load-in time, parking, vendor access windows, on-site contact, etc."
+        />
+      </label>
+
+      <!-- Venue Photos -->
+      <div class="rounded-2xl border border-border bg-bg/30 p-4 sm:p-6">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm text-text font-medium">Venue Reference Photos (optional)</p>
+            <p class="mt-1 text-sm text-muted">
+              Share any venue, floorplan, décor, or setup reference photos if available.
+            </p>
+          </div>
+          <div class="text-xs text-muted">
+            Draft saved locally · uploads stored for review
+          </div>
+        </div>
+
+        <div class="mt-5 grid gap-4 md:grid-cols-2">
+          <label class="grid gap-2">
+            <span class="text-sm text-muted">Venue exterior photos</span>
+            <input
+              id="photos-exterior"
+              type="file"
+              accept="image/*"
+              multiple
+              class="block w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text file:mr-4 file:rounded-lg file:border-0 file:bg-surface file:px-3 file:py-2 file:text-sm file:font-medium file:text-text"
+            />
+          </label>
+
+          <label class="grid gap-2">
+            <span class="text-sm text-muted">Venue interior / event space</span>
+            <input
+              id="photos-interior"
+              type="file"
+              accept="image/*"
+              multiple
+              class="block w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text file:mr-4 file:rounded-lg file:border-0 file:bg-surface file:px-3 file:py-2 file:text-sm file:font-medium file:text-text"
+            />
+          </label>
+        </div>
+
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <div class="rounded-xl border border-border bg-bg p-3">
+            <p class="text-xs uppercase tracking-wider text-muted">Exterior status</p>
+            <p class="mt-2 text-sm text-text"><span id="count-exterior">0</span> uploaded</p>
+            <p class="mt-1 text-xs text-muted" id="status-exterior">Awaiting uploads</p>
+          </div>
+
+          <div class="rounded-xl border border-border bg-bg p-3">
+            <p class="text-xs uppercase tracking-wider text-muted">Interior status</p>
+            <p class="mt-2 text-sm text-text"><span id="count-interior">0</span> uploaded</p>
+            <p class="mt-1 text-xs text-muted" id="status-interior">Awaiting uploads</p>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <p class="text-xs text-muted">
+            If an upload fails, refresh and try again. Draft fields remain saved on your device.
+          </p>
+        </div>
+      </div>
+
+      <!-- Submit controls -->
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="text-sm text-muted">
+          Draft saved locally. Select <span class="text-text font-medium">Submit for Review</span> when ready.
+        </div>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            id="clear-draft"
+            class="h-11 w-full sm:w-auto rounded-xl border border-border bg-bg px-5 text-sm font-medium text-text hover:border-accent/50 hover:bg-bg/60"
+          >
+            Clear Draft
+          </button>
+
+          <button
+            type="submit"
+            id="submit-review"
+            class="h-11 w-full sm:w-auto rounded-xl bg-accent px-5 text-sm font-semibold text-bg"
+          >
+            Submit for Review
+          </button>
+        </div>
+      </div>
+
+      <p class="mt-2 text-xs text-muted">
+        Submitting does not guarantee booking confirmation. Review is date and scope dependent.
+      </p>
+
+      <div
+        id="form-message"
+        class="hidden rounded-xl border border-border bg-bg/40 p-4 text-sm text-text whitespace-pre-line"
+        role="status"
+        aria-live="polite"
+      ></div>
+    </form>
+  </div>
+
+  <script is:inline>
+    (function () {
+      const form = document.getElementById("planck-intake");
+      if (!form) return;
+
+      let tierMap = {};
+      let tierMapNormalized = {};
+      try {
+        tierMap = JSON.parse(form.dataset.tierMap || "{}");
+        for (const [label, id] of Object.entries(tierMap)) {
+          tierMapNormalized[label.trim().toLowerCase()] = id;
+        }
+      } catch (e) {
+        tierMap = {};
+        tierMapNormalized = {};
+      }
+
+      function resolveTierId(rawTier) {
+        const exact = tierMap[rawTier] || "";
+        if (exact) return exact;
+        return tierMapNormalized[String(rawTier).trim().toLowerCase()] || "";
+      }
+
+      const requiredExterior = Number(form.dataset.requiredExterior || "2");
+      const requiredInterior = Number(form.dataset.requiredInterior || "2");
+      const requiredMin      = Number(form.dataset.requiredMin || "4");
+
+      const draftKey           = form.dataset.draftKey || "planck_event_intake_draft_v0_01";
+      const uploadUrlEndpoint  = form.dataset.uploadUrl || "/api/upload-url";
+      const submitEndpoint     = form.dataset.submitUrl || "/api/submit";
+
+      const fileExt = document.getElementById("photos-exterior");
+      const fileInt = document.getElementById("photos-interior");
+
+      const countExtEl  = document.getElementById("count-exterior");
+      const countIntEl  = document.getElementById("count-interior");
+      const statusExtEl = document.getElementById("status-exterior");
+      const statusIntEl = document.getElementById("status-interior");
+
+      const submitBtn = document.getElementById("submit-review");
+      const clearBtn  = document.getElementById("clear-draft");
+      const msgBox    = document.getElementById("form-message");
+
+      const contactMethodEl = document.getElementById("contact_method");
+      const phoneEl         = document.getElementById("phone");
+
+      function showMsg(text) {
+        if (!msgBox) return;
+        msgBox.textContent = text;
+        msgBox.classList.remove("hidden");
+      }
+      function hideMsg() {
+        if (!msgBox) return;
+        msgBox.classList.add("hidden");
+        msgBox.textContent = "";
+      }
+
+      function makeId() {
+        try {
+          if (crypto && crypto.randomUUID) return "intake_" + crypto.randomUUID().replace(/-/g, "");
+        } catch (e) {}
+        return "intake_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+      }
+
+      function getDraft() {
+        try {
+          const raw = localStorage.getItem(draftKey);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (e) { return null; }
+      }
+
+      function setDraft(d) {
+        try { localStorage.setItem(draftKey, JSON.stringify(d)); } catch (e) {}
+      }
+
+      function readFields() {
+        const data = {};
+        for (const el of form.elements) {
+          if (!el || !el.name) continue;
+          if (el.type === "file") continue;
+          data[el.name] = String(el.value || "");
+        }
+        return data;
+      }
+
+      function applyFields(data) {
+        if (!data) return;
+        for (const k in data) {
+          const el = form.elements[k];
+          if (el && typeof data[k] === "string") el.value = data[k];
+        }
+      }
+
+      function saveDraftFromForm() {
+        const d = getDraft() || {};
+        d.fields = readFields();
+        d.photos = d.photos || { items: [] };
+        setDraft(d);
+      }
+
+      function ensureIntakeId() {
+        const d = getDraft() || {};
+        d.id = d.id || makeId();
+        d.fields = d.fields || {};
+        d.fields.intake_id = d.id;
+        const idInput = form.elements["intake_id"];
+        if (idInput) idInput.value = d.id;
+        setDraft(d);
+        return d.id;
+      }
+
+      function photoCounts(items) {
+        const ext  = items.filter((x) => x && x.category === "exterior").length;
+        const intr = items.filter((x) => x && x.category === "interior").length;
+        return { ext, intr, total: ext + intr };
+      }
+
+      function enforcePhoneRequirement() {
+        if (!contactMethodEl || !phoneEl) return;
+        const method = String(contactMethodEl.value || "");
+        phoneEl.required = (method === "Text" || method === "Call");
+      }
+
+      function setCountsUI(items) {
+        const c = photoCounts(items);
+        if (countExtEl)  countExtEl.textContent  = String(c.ext);
+        if (countIntEl)  countIntEl.textContent  = String(c.intr);
+        if (statusExtEl) statusExtEl.textContent = c.ext  > 0 ? c.ext + " uploaded" : "None yet";
+        if (statusIntEl) statusIntEl.textContent = c.intr > 0 ? c.intr + " uploaded" : "None yet";
+        enforcePhoneRequirement();
+      }
+
+      async function getUploadUrl(intakeId, category, file) {
+        const payload = {
+          intake_id: intakeId,
+          category:  category,
+          filename:  file.name || "photo.jpg",
+          mime:      file.type || "image/jpeg",
+          bytes:     file.size || 0,
+        };
+        const res  = await fetch(uploadUrlEndpoint, {
+          method:  "POST",
+          headers: { "content-type": "application/json" },
+          body:    JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || !json.ok) throw new Error((json && json.error) || "upload_url_failed");
+        return json;
+      }
+
+      async function putFile(uploadUrl, file) {
+        const res = await fetch(uploadUrl, {
+          method:  "PUT",
+          headers: { "content-type": file.type || "application/octet-stream" },
+          body:    file,
+        });
+        if (!res.ok) throw new Error("upload_failed");
+      }
+
+      async function handleFiles(category, filesArray) {
+        hideMsg();
+        const intakeId = ensureIntakeId();
+        const d = getDraft() || {};
+        d.photos = d.photos || { items: [] };
+        const files = Array.isArray(filesArray) ? filesArray : Array.from(filesArray || []);
+        if (!files.length) return;
+        const statusEl = category === "exterior" ? statusExtEl : statusIntEl;
+        if (statusEl) statusEl.textContent = "Uploading…";
+        for (const file of files) {
+          try {
+            const { key, uploadUrl } = await getUploadUrl(intakeId, category, file);
+            await putFile(uploadUrl, file);
+            d.photos.items.push({ key: String(key), mime: String(file.type || "image/jpeg"), bytes: Number(file.size || 0), category });
+            setDraft(d);
+            setCountsUI(d.photos.items);
+          } catch (e) {
+            showMsg("Upload failed. Please refresh and try again.");
+            if (statusEl) statusEl.textContent = "Upload failed";
+            return;
+          }
+        }
+        if (statusEl) statusEl.textContent = "Upload complete";
+      }
+
+      function buildPacket() {
+        const d      = getDraft() || {};
+        const fields = readFields();
+        const id     = ensureIntakeId();
+        const items  = (d.photos && d.photos.items) ? d.photos.items : [];
+        const c      = photoCounts(items);
+        const tierId = resolveTierId(fields.tier);
+
+        console.log("[EventIntake] tier selected:", fields.tier, "→ tier_id:", tierId || "(unresolved)");
+
+        return {
+          v:    "0.01",
+          kind: "planck.intake",
+          id,
+          ts:   new Date().toISOString(),
+          source: { surface: "planck.fyi", channel: "web", surface_slug: "event-coordination" },
+          data: {
+            contact: {
+              name:   fields.name || "",
+              method: fields.contact_method || "",
+              email:  fields.email || "",
+              phone:  fields.phone || "",
+            },
+            asset: {
+              class:   fields.asset_class || "",
+              details: fields.asset_details || "",
+            },
+            request: {
+              tier:             fields.tier || "",
+              tier_id:          tierId,
+              service_area:     fields.service_area || "",
+              preferred_days:   fields.preferred_days || "",
+              preferred_window: fields.preferred_window || "",
+            },
+            notes: {
+              condition: fields.condition_notes || "",
+              access:    fields.access_notes || "",
+            },
+            ack: {
+              approval_gated:         true,
+              base_rate_for_partials: true,   // required by backend validation
+              photo_required:         true,   // required by backend validation
+            },
+          },
+          photos: {
+            required_min:        requiredMin,
+            required_categories: { exterior: requiredExterior, interior: requiredInterior },
+            counts:              { exterior: c.ext, interior: c.intr },
+            items,
+          },
+        };
+      }
+
+      async function submitForReview() {
+        hideMsg();
+        enforcePhoneRequirement();
+
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          setCountsUI(((getDraft() || {}).photos || {}).items || []);
+          return;
+        }
+
+        const d     = getDraft() || {};
+        const items = (d.photos && d.photos.items) ? d.photos.items : [];
+        const c     = photoCounts(items);
+
+        const packet = buildPacket();
+
+        if (!packet.data.request.tier_id) {
+          showMsg("Please select a coordination package before submitting.");
+          return;
+        }
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.classList.add("opacity-60");
+          submitBtn.textContent = "Submitting…";
+        }
+
+        const res  = await fetch(submitEndpoint, {
+          method:  "POST",
+          headers: { "content-type": "application/json" },
+          body:    JSON.stringify(packet),
+        });
+        const json = await res.json().catch(() => null);
+
+        if (!res.ok || !json || !json.ok) {
+          const err = (json && json.error) ? String(json.error) : "submit_failed";
+          showMsg("Not submitted. Please try again. (" + err + ")");
+          if (submitBtn) {
+            submitBtn.textContent = "Submit for Review";
+            submitBtn.disabled    = false;
+            submitBtn.classList.remove("opacity-60");
+          }
+          return;
+        }
+
+        showMsg(
+          "Request received. Review pending.\n\n" +
+          "Next steps:\n" +
+          "1) We review date, venue, and scope\n" +
+          "2) If confirmed, you receive a coordination brief and booking details\n" +
+          "3) If unavailable, you'll receive a short note and alternative options"
+        );
+
+        try { localStorage.removeItem(draftKey); } catch (e) {}
+
+        if (submitBtn) {
+          submitBtn.textContent = "Submitted";
+          submitBtn.disabled    = true;
+          submitBtn.classList.add("opacity-60");
+        }
+      }
+
+      (function init() {
+        const d = getDraft();
+        if (d && d.fields) applyFields(d.fields);
+        ensureIntakeId();
+        const items = (d && d.photos && d.photos.items) ? d.photos.items : [];
+        setCountsUI(items);
+
+        form.addEventListener("input", function () {
+          saveDraftFromForm();
+          const dd = getDraft() || {};
+          setCountsUI((dd.photos && dd.photos.items) ? dd.photos.items : []);
+        });
+        form.addEventListener("change", function () {
+          saveDraftFromForm();
+          const dd = getDraft() || {};
+          setCountsUI((dd.photos && dd.photos.items) ? dd.photos.items : []);
+        });
+
+        if (contactMethodEl) {
+          contactMethodEl.addEventListener("change", function () {
+            enforcePhoneRequirement();
+            const dd = getDraft() || {};
+            setCountsUI((dd.photos && dd.photos.items) ? dd.photos.items : []);
+          });
+        }
+
+        if (fileExt) {
+          fileExt.addEventListener("change", function (e) {
+            const files = Array.from((e && e.target && e.target.files) ? e.target.files : []);
+            if (files.length) handleFiles("exterior", files);
+            if (e && e.target) e.target.value = "";
+          });
+        }
+
+        if (fileInt) {
+          fileInt.addEventListener("change", function (e) {
+            const files = Array.from((e && e.target && e.target.files) ? e.target.files : []);
+            if (files.length) handleFiles("interior", files);
+            if (e && e.target) e.target.value = "";
+          });
+        }
+
+        if (clearBtn) {
+          clearBtn.addEventListener("click", function () {
+            try { localStorage.removeItem(draftKey); } catch (e) {}
+            window.location.reload();
+          });
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          submitForReview();
+        });
+      })();
+    })();
+  </script>
+</section>

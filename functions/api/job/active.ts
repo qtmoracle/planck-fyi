@@ -13,6 +13,7 @@ import {
   JOB_STATE_PREFIX,
   r2GetJSON,
 } from "./_lib";
+import { getServiceEventByJobId } from "../../../src/lib/service-events";
 
 export const onRequestGet: PagesFunction = async (ctx) => {
   try {
@@ -72,6 +73,12 @@ export const onRequestGet: PagesFunction = async (ctx) => {
       return json({ ok: false, error: "job_packet_not_found", job_id: jobId, key: packetKey }, 404);
     }
 
+    // 4) Enrich with ServiceEvent summary for dashboard next-action resolution
+    const se = await getServiceEventByJobId(bucket as any, jobId);
+    const evidenceCount = se
+      ? se.evidence.arrival.length + se.evidence.before.length + se.evidence.after.length
+      : 0;
+
     return json(
       {
         ok: true,
@@ -79,6 +86,14 @@ export const onRequestGet: PagesFunction = async (ctx) => {
           job_id: jobId,
           packet: jobPacket,
           state: best.state,
+          service_event_summary: {
+            service_event_id: se?.id ?? null,
+            status: se?.status ?? null,
+            payment_status: se?.meta?.payment_status ?? null,
+            amount_collected: se?.meta?.amount_collected ?? null,
+            evidence_count: evidenceCount,
+            surface: se?.service?.surface ?? null,
+          },
         },
       },
       200

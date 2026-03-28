@@ -1,3 +1,5 @@
+export type AccessState = "active" | "limited" | "suspended";
+
 export type Operator = {
   slug: string;
   name: string;
@@ -14,6 +16,8 @@ export type Operator = {
 
   template: "v1";
   bookingHref: string;
+
+  accessState: AccessState;
 };
 
 export const operators: Operator[] = [
@@ -32,7 +36,8 @@ export const operators: Operator[] = [
     tagline: "Structured execution for vehicles that deserve precision.",
 
     template: "v1",
-    bookingHref: "#request"
+    bookingHref: "#request",
+    accessState: "active"
   },
   {
     slug: "qtm-astrology",
@@ -49,7 +54,8 @@ export const operators: Operator[] = [
     tagline: "Interpretive analysis for timing, patterns, and decision clarity.",
 
     template: "v1",
-    bookingHref: "#request-session"
+    bookingHref: "#request-session",
+    accessState: "active"
   },
   {
     slug: "qtm-landscaping",
@@ -66,7 +72,44 @@ export const operators: Operator[] = [
     tagline: "Structured execution for properties that deserve consistent care.",
 
     template: "v1",
-    bookingHref: "#request"
+    bookingHref: "#request",
+    accessState: "active"
+  },
+  {
+    slug: "sunrise-landscaping",
+    name: "Sunrise Landscaping",
+    logo: "/brand/planck-wordmark.png",
+
+    country: "us",
+    state: "fl",
+    city: "fort-lauderdale",
+
+    regionName: "Broward County",
+
+    surface: "landscaping",
+    tagline: "Structured property care for Broward County.",
+
+    template: "v1",
+    bookingHref: "#request",
+    accessState: "active"
+  },
+  {
+    slug: "qtm-events",
+    name: "QTM Events",
+    logo: "/brand/planck-wordmark.png",
+
+    country: "us",
+    state: "fl",
+    city: "miami",
+
+    regionName: "Miami Dade County",
+
+    surface: "event-coordination",
+    tagline: "Structured execution for events that demand precision.",
+
+    template: "v1",
+    bookingHref: "#request",
+    accessState: "active"
   }
 ];
 

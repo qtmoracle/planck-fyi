@@ -85,11 +85,15 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
     // 4) Mutate JOB_STATE_v0.01 -> active (single-tech)
     const operatorSlug = String(request.headers.get("x-operator-slug") || "").trim();
+    if (!operatorSlug) {
+      return json({ ok: false, error: "missing_operator_slug", hint: "x-operator-slug header is required" }, 400);
+    }
+
     const now = new Date().toISOString();
     const nextState = {
       ...currentState,
       status: "active",
-      assigned_to: operatorSlug || currentState.assigned_to || "tech_001",
+      assigned_to: operatorSlug,
       claimed_at: now,
       last_updated_at: now,
     };
