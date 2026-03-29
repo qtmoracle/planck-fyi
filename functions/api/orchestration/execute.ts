@@ -19,8 +19,8 @@
 // Version: orchestration-execute-v0.01
 
 import { checkAgentAuth, isR2, json, r2GetJSON } from "../agent/_lib";
-import { executeApprovedIntent } from "../../../src/lib/orchestration/execute-approved";
-import type { OrchestrationIntent } from "../../../src/lib/orchestration/types";
+import { executeApprovedIntent } from "qtm-core/orchestration";
+import type { OrchestrationIntent } from "qtm-core/orchestration";
 import { REVIEW_LOG_PREFIX } from "./review";
 
 const EXECUTE_LOG_PREFIX = "planck/orchestration_logs/ORCHESTRATION_EXECUTE_v0.01/";
@@ -58,12 +58,11 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     }
 
     // Find the most recent approved review entry for this intent ID
-    // Scan REVIEW log (not proposal log) — approved state is authoritative there
     const reviewListed = await bucket.list({ prefix: REVIEW_LOG_PREFIX, limit: 1000 });
     const reviewKeys: string[] = (reviewListed?.objects || [])
       .map((o: any) => String(o?.key || ""))
       .filter(Boolean)
-      .sort((a: string, b: string) => b.localeCompare(a)); // newest first
+      .sort((a: string, b: string) => b.localeCompare(a));
 
     let approvedIntent: OrchestrationIntent | null = null;
 
@@ -73,7 +72,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       if (String(entry.intent_id || "") !== intentId) continue;
       if (String(entry.decision || "") !== "approved") continue;
 
-      // Found most recent approved review for this intent — use intent_after
       if (entry.intent_after && typeof entry.intent_after === "object") {
         approvedIntent = entry.intent_after as OrchestrationIntent;
         break;
@@ -89,7 +87,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       }, 404);
     }
 
-    // Validate approved state on the intent itself (belt-and-suspenders)
     if (approvedIntent.mode !== "approved") {
       return json({
         ok:        false,
@@ -99,7 +96,7 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       }, 409);
     }
 
-    // Execute through the Action Surface bridge
+    // Execute through core
     const bridgeResult = await executeApprovedIntent(approvedIntent, bucket);
 
     const now    = new Date().toISOString();
@@ -107,7 +104,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     const random = Math.random().toString(36).slice(2, 8);
     const logKey = `${EXECUTE_LOG_PREFIX}${ts}_${random}.json`;
 
-    // Persist append-only execution log entry regardless of success/failure
     const executeEntry = {
       schema:     "ORCHESTRATION_EXECUTE_LOG_v0.01",
       logged_at:  now,

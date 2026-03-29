@@ -12,24 +12,21 @@
 // Version: orchestration-log-v0.01
 
 import { checkAgentAuth, isR2, json } from "../agent/_lib";
-import { logOrchestrationIntents } from "../../../src/lib/orchestration/index";
-import type { OrchestrationIntent } from "../../../src/lib/orchestration/index";
+import { logOrchestrationIntents } from "qtm-core/orchestration";
+import type { OrchestrationIntent } from "qtm-core/orchestration";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
     const { request, env } = ctx;
 
-    // Auth
     const authError = checkAgentAuth(request, env);
     if (authError) return authError;
 
-    // R2 binding
     const bucket = env?.INTAKE_BUCKET;
     if (!isR2(bucket)) {
       return json({ ok: false, error: "r2_binding_missing" }, 500);
     }
 
-    // Parse body
     let body: any = null;
     try {
       const txt = await request.text();
@@ -52,15 +49,20 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       return json({ ok: false, error: "missing_intents" }, 400);
     }
 
-    // Validate: v0.01 only accepts proposed intents with requires_human: true
     const validated: OrchestrationIntent[] = [];
     for (const raw of rawIntents) {
       if (!raw || typeof raw !== "object") continue;
       if (String(raw.mode || "") !== "proposed") {
-        return json({ ok: false, error: "invalid_mode", detail: "v0.01 only accepts mode: proposed" }, 400);
+        return json(
+          { ok: false, error: "invalid_mode", detail: "v0.01 only accepts mode: proposed" },
+          400
+        );
       }
       if (raw.requires_human !== true) {
-        return json({ ok: false, error: "requires_human_must_be_true", detail: "v0.01 requires requires_human: true" }, 400);
+        return json(
+          { ok: false, error: "requires_human_must_be_true", detail: "v0.01 requires requires_human: true" },
+          400
+        );
       }
       validated.push(raw as OrchestrationIntent);
     }
@@ -71,12 +73,14 @@ export const onRequestPost: PagesFunction = async (ctx) => {
 
     const key = await logOrchestrationIntents(bucket, validated, sourceEvent);
 
-    return json({
-      ok:            true,
-      key,
-      intent_count:  validated.length,
-    }, 200);
-
+    return json(
+      {
+        ok: true,
+        key,
+        intent_count: validated.length,
+      },
+      200
+    );
   } catch (err: any) {
     return json(
       { ok: false, error: "internal_error", message: String(err?.message || err) },
