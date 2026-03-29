@@ -3,9 +3,9 @@ import {
   getServiceEventByJobId,
   putServiceEvent,
   jsonResponse,
-} from "../../../src/lib/service-events";
-import type { CreateServiceEventInput } from "../../../src/lib/service-events";
-import { evaluateAccess, denyResponse } from "../../../src/lib/access/index";
+} from "qtm-core/service-events";
+import type { CreateServiceEventInput } from "qtm-core/service-events";
+import { evaluateAccess, denyResponse } from "qtm-core/access";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {

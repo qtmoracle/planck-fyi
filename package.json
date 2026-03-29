@@ -13,12 +13,26 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
     "alpinejs": "^3.15.8",
-    "astro": "^5.17.1"
+    "astro": "^5.17.1",
+    "qtm-core": "file:../qtm-core"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260303.0",
     "@tailwindcss/cli": "^4.2.1",
     "tailwindcss": "^4.2.1",
     "wrangler": "^4.68.1"
-  }
+  },
+  "description": "```sh npm create astro@latest -- --template minimal ```",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qtmoracle/planck-fyi.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/qtmoracle/planck-fyi/issues"
+  },
+  "homepage": "https://github.com/qtmoracle/planck-fyi#readme"
 }
