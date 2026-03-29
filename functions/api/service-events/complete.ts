@@ -4,12 +4,12 @@ import {
   isServiceEventPaymentStatus,
   jsonResponse,
   putServiceEvent,
-} from "../../../src/lib/service-events";
+} from "qtm-core/service-events";
 import {
   composeSurfaceRecord,
   composeSurfaceSummary,
-} from "../../../src/lib/runtime-adapters";
-import { evaluateAccess, denyResponse } from "../../../src/lib/access/index";
+} from "qtm-core/runtime-adapters";
+import { evaluateAccess, denyResponse } from "qtm-core/access";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {

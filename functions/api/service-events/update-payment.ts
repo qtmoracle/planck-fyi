@@ -9,7 +9,7 @@ import {
   isServiceEventPaymentStatus,
   jsonResponse,
   putServiceEvent,
-} from "../../../src/lib/service-events";
+} from "qtm-core/service-events";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
@@ -43,7 +43,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       return jsonResponse({ ok: false, error: "service_event_not_found" }, 404);
     }
 
-    // Overlay only the provided payment fields; preserve everything else in meta.
     const updatedMeta = { ...event.meta };
 
     if (payment_status_raw !== null) {

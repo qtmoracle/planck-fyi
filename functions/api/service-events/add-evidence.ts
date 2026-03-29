@@ -10,11 +10,11 @@ import {
   isEvidenceStage,
   jsonResponse,
   putServiceEvent,
-} from "../../../src/lib/service-events";
+} from "qtm-core/service-events";
 import type {
   EvidenceStage,
   ServiceEventEvidenceItem,
-} from "../../../src/lib/service-events";
+} from "qtm-core/service-events";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
@@ -52,7 +52,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       return jsonResponse({ ok: false, error: "service_event_not_found" }, 404);
     }
 
-    // Deduplicate by R2 key against items already in the evidence array
     const existingKeys = new Set(
       event.evidence[stage as EvidenceStage]
         .map((item) => item.key)
@@ -72,7 +71,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       }));
 
     if (newItems.length === 0) {
-      // All items already recorded — idempotent success
       return jsonResponse({ ok: true, service_event: event, appended: 0 }, 200);
     }
 

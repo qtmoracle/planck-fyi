@@ -3,8 +3,8 @@ import {
   startServiceEvent,
   putServiceEvent,
   jsonResponse,
-} from "../../../src/lib/service-events";
-import { evaluateAccess, denyResponse } from "../../../src/lib/access/index";
+} from "qtm-core/service-events";
+import { evaluateAccess, denyResponse } from "qtm-core/access";
 
 export const onRequestPost: PagesFunction = async (ctx) => {
   try {
@@ -40,7 +40,6 @@ export const onRequestPost: PagesFunction = async (ctx) => {
     try {
       updated = startServiceEvent(event);
     } catch (err) {
-      // startServiceEvent throws if event is already completed
       return jsonResponse(
         {
           ok: false,
