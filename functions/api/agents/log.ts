@@ -19,17 +19,17 @@ export const onRequestPost: PagesFunction = async (ctx) => {
   try {
     const { request, env } = ctx;
 
-    // 0) Auth
     const authError = checkAgentAuth(request, env);
     if (authError) return authError;
 
-    // 1) R2 binding — same bucket used by all system records
     const bucket = env?.INTAKE_BUCKET;
     if (!isR2(bucket)) {
-      return json({ ok: false, error: "r2_binding_missing", hint: "Expected env.INTAKE_BUCKET (R2)." }, 500);
+      return json(
+        { ok: false, error: "r2_binding_missing", hint: "Expected env.INTAKE_BUCKET (R2)." },
+        500
+      );
     }
 
-    // 2) Parse body
     let body: any = null;
     try {
       const txt = await request.text();
@@ -42,34 +42,31 @@ export const onRequestPost: PagesFunction = async (ctx) => {
       return json({ ok: false, error: "missing_body" }, 400);
     }
 
-    const eventType    = String(body.event_type || "").trim();
-    const source       = String(body.source || "unknown").trim();
+    const eventType = String(body.event_type || "").trim();
+    const source = String(body.source || "unknown").trim();
     const routingResult = body.routing_result ?? {};
 
     if (!eventType) {
       return json({ ok: false, error: "missing_event_type" }, 400);
     }
 
-    // 3) Build append-only log entry
-    const now    = new Date().toISOString();
-    const ts     = Date.now();
+    const now = new Date().toISOString();
+    const ts = Date.now();
     const random = Math.random().toString(36).slice(2, 8);
 
     const logEntry = {
-      schema:         "AGENT_ROUTING_LOG_v0.01",
-      created_at:     now,
+      schema: "AGENT_ROUTING_LOG_v0.01",
+      created_at: now,
       source,
-      event_type:     eventType,
+      event_type: eventType,
       routing_result: routingResult,
     };
 
-    // Unique key per write — nothing is ever overwritten
     const key = `planck/agent_logs/AGENT_ROUTING_LOG_v0.01/${ts}_${random}.json`;
 
     await r2PutJSON(bucket, key, logEntry);
 
     return json({ ok: true, key }, 200);
-
   } catch (err: any) {
     return json(
       { ok: false, error: "internal_error", message: String(err?.message || err) },
